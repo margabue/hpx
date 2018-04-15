@@ -17,14 +17,11 @@
 #ifndef JT28092007_ostream_like_HPP_DEFINED
 #define JT28092007_ostream_like_HPP_DEFINED
 
-#if defined(HPX_MSVC) && (HPX_MSVC >= 1020)
-# pragma once
-#endif
-
 #include <hpx/util/logging/detail/fwd.hpp>
 
 #include <iostream>
 #include <sstream>
+#include <string>
 
 namespace hpx { namespace util { namespace logging {
 
@@ -43,7 +40,7 @@ A class that implements gathering the message needs 2 things:
 */
 
 namespace optimize {
-    template<class char_type_ > struct cache_string_one_str ;
+    struct cache_string_one_str ;
 }
 
 /**
@@ -55,10 +52,10 @@ namespace optimize {
 
     @code
     struct return_str {
-        typedef std::basic_ostringstream<char_type> stream_type;
+        typedef std::ostringstream stream_type;
 
         stream_type & out() { return m_out; }
-        std::basic_string<char_type> msg() { return m_out.str(); }
+        std::string msg() { return m_out.str(); }
     private:
         stream_type m_out;
     };
@@ -67,23 +64,6 @@ namespace optimize {
     @sa gather::ostream_like
 */
 namespace gather {
-
-/**
-    @brief In case your gather class returns anything else than a std::basic_ostream,
-    that returned class @b must derive from this.
-
-    This is needed when :
-    - in your application, you could have messages logged before your logs are
-      initialized
-    - you want filters to work even "in advance" - that is,
-    if a message was logged before your log was initialized,
-      and when you initialize the log, its corresponding filter is turned on,
-      that message will be logged.
-      Otherwise, it will @b not be logged.
-*/
-struct out_base {
-    operator const void*() const { return this; }
-};
 
 
 /**
@@ -110,7 +90,7 @@ namespace ostream_like {
     - ostream_like
 
 */
-template<class stream_type = std::basic_ostringstream<char_type> >
+template<class stream_type = std::ostringstream >
 struct return_raw_stream { //-V690
     // what does the gather_msg class return?
     typedef stream_type msg_type;
@@ -146,14 +126,13 @@ private:
     - ostream_like
 
 
-    @bug right now prepend_size and append_size are ignored;
-    because we can also return a cache_string_several_str<>.
+    @bug right now prepend_size and append_size are ignored.
     When fixing, watch the find_gather class!
 */
 template<
         class string = hpx::util::logging::optimize
-            ::cache_string_one_str<hold_string_type> ,
-        class stream_type = std::basic_ostringstream<char_type>
+            ::cache_string_one_str ,
+        class stream_type = std::ostringstream
 > struct return_str { //-V690
 
     // what does the gather_msg class return?
@@ -169,41 +148,6 @@ private:
     stream_type m_out;
 };
 
-
-
-/**
-    @brief Returns a tag holder
-
-    See @ref hpx::util::logging::tag namespace
-*/
-template<class holder_type, class stream_type> struct return_tag_holder
-    : out_base { //-V690
-    // what does the gather_msg class return?
-    typedef holder_type msg_type;
-
-    return_tag_holder() {}
-    return_tag_holder(const return_tag_holder& other) : m_out(other.m_out.str()),
-        m_val(other.m_val) {}
-
-
-    return_tag_holder & out() { return *this; }
-    template<class tag_type> return_tag_holder& set_tag(const tag_type & tag) {
-        m_val.set_tag(tag);
-        return *this;
-    }
-
-    template<class val_type> stream_type & operator<<(const val_type& val)
-    { m_out << val; return m_out; }
-
-    /** @brief returns the holder */
-    holder_type & msg() { m_val.set_string( m_out.str() ); return m_val; }
-private:
-    holder_type m_val;
-    stream_type m_out;
-
-};
-
 }}}}}
 
 #endif
-

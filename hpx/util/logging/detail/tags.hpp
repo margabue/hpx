@@ -17,16 +17,8 @@
 #ifndef JT28092007_tags_HPP_DEFINED
 #define JT28092007_tags_HPP_DEFINED
 
-#if defined(HPX_MSVC) && (HPX_MSVC >= 1020)
-# pragma once
-#endif
-
-#ifndef JT28092007_format_fwd_HPP_DEFINED
-#error Donot include directly. Please include <hpx/util/logging/format_fwd.hpp>
-#endif
-
-
 #include <hpx/util/logging/detail/fwd.hpp>
+#include <string>
 
 namespace hpx { namespace util { namespace logging {
 
@@ -41,18 +33,6 @@ namespace detail {
     struct void_8 {};
     struct void_9 {};
     struct void_10 {};
-
-    template<class string_type> struct tag_holder_base {
-        // assumes m_string is convertible to string
-        operator const hold_string_type & () const { return m_string; }
-    protected:
-        string_type m_string;
-    };
-    template<> struct tag_holder_base<default_> {
-        // it's for the default string
-    protected:
-        hold_string_type m_string;
-    };
 }
 
 /**
@@ -62,7 +42,6 @@ file/line, function name, thread id, etc.), and log this information as well
 - @ref tag_need
 - @ref tag_explained
     - @ref tag_classes
-    - @ref tag_tag_holder
     - @ref tag_adding_tags
     - @ref tag_process_tags
     - @ref tag_see_example
@@ -149,30 +128,6 @@ struct time {
 
 They only allow holding the context, and making sure you can get to it
 - when doing formatting. You can of course add your own tag clases.
-
-
-
-@subsection tag_tag_holder Tag Holder - holding the tags
-
-Now, you have to decide what tags you need. You will use templated class tag::holder:
-- first param: the string class
-- the next params: the tags you need
-
-You will replace your old <tt>HPX_LOG_FORMAT_MSG(string_class)</tt> usage,
-with tags. In case you don't have a HPX_LOG_FORMAT_MSG in your
-application, the string_class is std::(w)string.
-
-@code
-// old
-HPX_LOG_FORMAT_MSG( optimize::cache_string_one_str<> )
-
-// new - use tags
-//
-//       In our case, time, file/line, function name
-typedef tag::holder< optimize::cache_string_one_str<>,
-tag::time, tag::file_line, tag::function> string;
-HPX_LOG_FORMAT_MSG( string )
-@endcode
 
 
 
@@ -290,13 +245,10 @@ template<
         class param7 = detail::void_7,
         class param8 = detail::void_8,
         class param9 = detail::void_9,
-        class param10 = detail::void_10> struct holder
-            : detail::tag_holder_base<string_> {
-    typedef typename use_default<string_, hold_string_type>::type string_type;
-    typedef detail::tag_holder_base<string_> tag_base_type;
+        class param10 = detail::void_10> struct holder {
 
-    operator string_type & () { return tag_base_type::m_string; }
-    operator const string_type & () const { return tag_base_type::m_string; }
+    operator std::string & () { return tag_base_type::m_string; }
+    operator const std::string & () const { return tag_base_type::m_string; }
 
     operator const param1& () const { return m_tag1; }
     operator const param2& () const { return m_tag2; }
@@ -318,7 +270,7 @@ template<
         return this->operator const tag_type&();
     }
 
-    void set_string(const string_type & str) {
+    void set_string(const std::string & str) {
         tag_base_type::m_string = str;
     }
 
@@ -354,6 +306,9 @@ private:
         m_tag10 = tag;
     }
 
+protected:
+    std::string m_string;
+
 private:
     param1 m_tag1;
     param2 m_tag2;
@@ -373,4 +328,3 @@ private:
 #include <hpx/util/logging/tag/defaults.hpp>
 
 #endif
-
