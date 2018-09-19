@@ -607,7 +607,7 @@ namespace hpx { namespace threads { namespace policies
             thread_priority priority = thread_priority_normal) override
         {
             std::size_t queue_size = queues_.size();
-
+            std::cout << "scheduling thread" << std::endl;
             if (std::size_t(-1) == num_thread)
             {
                 num_thread = curr_queue_++ % queue_size;
