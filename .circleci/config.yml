@@ -36,25 +36,42 @@ jobs:
       - image: stellargroup/build_env:debian_clang
     working_directory: /hpx
     steps:
+      # Try to restore source cache. Keys are tried in order. The checkout step
+      # correctly handles the case when there is a cache entry.
+      - restore_cache:
+          keys:
+            - source-v2-{{ .Branch }}-{{ .Revision }}
+            - source-v2-{{ .Branch }}-
+            - source-v2-
       - checkout:
-          path: /hpx/source
+          path: /hpx/source-cache
+      - save_cache:
+          key: source-v2-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - /hpx/source-cache
+      # Make a shallow clone of the current commit so that we don't have to copy
+      # the whole repository between work steps.
+      - run:
+          name: Creating shallow clone
+          command: |
+              git clone --depth=1 file:///hpx/source-cache source
       - run:
           name: Downloading CTest XML to Junit XML
           command: |
               curl \
                 https://raw.githubusercontent.com/Kitware/CDash/master/tests/circle/conv.xsl \
                 -o /hpx/conv.xsl
-      - save_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - persist_to_workspace:
+          root: /hpx
           paths:
-            - /hpx/source
-            - /hpx/conv.xsl
+            - ./source
+            - ./conv.xsl
 
   configure:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - attach_workspace:
+          at: /hpx
       - run:
           name: Running CMake
           command: |
@@ -64,24 +81,23 @@ jobs:
                 -G "Ninja" \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DHPX_WITH_MALLOC=system \
-                -DHPX_WITH_GIT_COMMIT=${CIRCEL_SHA1} \
+                -DHPX_WITH_GIT_COMMIT=${CIRCLE_SHA1} \
                 -DHPX_WITH_TOOLS=On \
                 -DCMAKE_CXX_FLAGS="-fcolor-diagnostics" \
                 -DHPX_WITH_TESTS_HEADERS=On \
                 -DHPX_WITH_DEPRECATION_WARNINGS=Off \
+                -DHPX_WITH_THREAD_LOCAL_STORAGE=On \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=On
       - persist_to_workspace:
-          root: /hpx/build
+          root: /hpx
           paths:
-            - ./*
+            - ./build
 
   clang_tidy:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Running clang-tidy
           command: |
@@ -90,10 +106,8 @@ jobs:
   inspect:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Inspect Tool
           command: |
@@ -116,33 +130,46 @@ jobs:
       - store_test_results:
           path: /report
       - persist_to_workspace:
-          root: /hpx/build
+          root: /hpx
           paths:
-            - ./bin/inspect
+            - ./build/bin/inspect
 
   core:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Core
           command: |
               ninja -j2 core
       - persist_to_workspace:
-          root: /hpx/build
+          root: /hpx
           paths:
-            - ./*
+            - ./build
+
+  tests.examples:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /hpx
+      - run:
+          name: Running Unit Tests
+          when: always
+          command: |
+              ctest -T test --no-compress-output --output-on-failure -R tests.examples
+      - run:
+          <<: *convert_xml
+      - store_test_results:
+          path: tests.examples
+      - store_artifacts:
+          path: tests.examples
 
   tests.unit.actions:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -162,10 +189,8 @@ jobs:
   tests.unit.agas:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -185,10 +210,8 @@ jobs:
   tests.unit.build:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -208,10 +231,8 @@ jobs:
   tests.unit.component:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -231,10 +252,8 @@ jobs:
   tests.unit.computeapi:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -254,10 +273,8 @@ jobs:
   tests.unit.diagnostics:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -277,10 +294,8 @@ jobs:
   tests.unit.lcos:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -300,10 +315,8 @@ jobs:
   tests.unit.parallel.algorithms:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -323,10 +336,8 @@ jobs:
   tests.unit.parallel.block:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -346,10 +357,8 @@ jobs:
   tests.unit.parallel.container_algorithms:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -369,10 +378,8 @@ jobs:
   tests.unit.parallel.datapar_algorithms:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -392,10 +399,8 @@ jobs:
   tests.unit.parallel.executors:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -415,10 +420,8 @@ jobs:
   tests.unit.parallel.segmented_algorithms:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           # We need to compile some tests serially because they eat too much
@@ -440,10 +443,8 @@ jobs:
   tests.unit.parcelset:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -463,10 +464,8 @@ jobs:
   tests.unit.performance_counter:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -486,10 +485,8 @@ jobs:
   tests.unit.resource:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -509,10 +506,8 @@ jobs:
   tests.unit.serialization:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -532,10 +527,8 @@ jobs:
   tests.unit.threads:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -555,10 +548,8 @@ jobs:
   tests.unit.traits:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -578,10 +569,8 @@ jobs:
   tests.unit.util:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Unit Tests
           command: |
@@ -601,10 +590,8 @@ jobs:
   tests.regressions:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Regressions Tests
           command: |
@@ -624,10 +611,8 @@ jobs:
   tests.headers.compat:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -642,10 +627,8 @@ jobs:
   tests.headers.components:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -660,10 +643,8 @@ jobs:
   tests.headers.compute:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -678,10 +659,8 @@ jobs:
   tests.headers.config:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -696,10 +675,8 @@ jobs:
   tests.headers.include:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -714,10 +691,8 @@ jobs:
   tests.headers.lcos:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -732,10 +707,8 @@ jobs:
   tests.headers.parallel:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -750,10 +723,8 @@ jobs:
   tests.headers.performance_counters:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -768,10 +739,8 @@ jobs:
   tests.headers.plugins:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -786,10 +755,8 @@ jobs:
   tests.headers.runtime:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -804,10 +771,8 @@ jobs:
   tests.headers.traits:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -822,10 +787,8 @@ jobs:
   tests.headers.util:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Header Tests
           command: |
@@ -840,10 +803,8 @@ jobs:
   tests.performance:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Performance Tests
           command: |
@@ -852,18 +813,16 @@ jobs:
   examples:
     <<: *defaults
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - run:
           name: Building Examples
           command: |
               ninja -j2 examples
       - persist_to_workspace:
-          root: /hpx/build
+          root: /hpx
           paths:
-            - ./*
+            - ./build
 
   install:
     docker:
@@ -871,10 +830,8 @@ jobs:
     environment:
       TARGET_IMAGE_NAME: stellargroup/hpx:dev
     steps:
-      - restore_cache:
-          key: v2-repo-{{ .Environment.CIRCLE_SHA1 }}
       - attach_workspace:
-          at: /hpx/build
+          at: /hpx
       - setup_remote_docker
       - run:
           name: Installing
@@ -915,10 +872,12 @@ jobs:
       - run:
           name: Push Docker Image
           command: |
-              docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-              docker push ${TARGET_IMAGE_NAME}
-          filters:
-              branches: master
+              if [ -z "$CIRCLE_PR_NUMBER" ] && [ "$CIRCLE_BRANCH" == "master" ]; then
+                  docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+                  docker push ${TARGET_IMAGE_NAME}
+              else
+                  echo "Skipping docker push on non-master branch"
+              fi
 
 workflows:
   version: 2
@@ -941,6 +900,9 @@ workflows:
           requires:
             - configure
           <<: *gh_pages_filter
+      - tests.examples:
+          requires:
+            - examples
       - tests.unit.actions:
           <<: *core_dependency
       - tests.unit.agas:
@@ -1016,6 +978,7 @@ workflows:
             - inspect
             - clang_tidy
             - core
+            - tests.examples
             - tests.unit.actions
             - tests.unit.agas
             - tests.unit.build

@@ -225,6 +225,13 @@ else()
     ON CATEGORY "Build Targets")
 endif()
 
+hpx_option(HPX_WITH_DYNAMIC_HPX_MAIN BOOL
+  "Enable dynamic overload of system 'main()` (Linux only, default: ON)"
+  ON ADVANCED CATEGORY "Utility")
+if(HPX_WITH_DYNAMIC_HPX_MAIN)
+  hpx_add_config_cond_define(HPX_HAVE_DYNAMIC_HPX_MAIN 1)
+endif()
+
 ################################################################################
 # Some platforms do not support dynamic linking. Enable this to link all
 # libraries statically. This also changes some of the internals of HPX related
@@ -259,11 +266,15 @@ hpx_option(HPX_WITH_TESTS_REGRESSIONS BOOL "Build HPX regression tests (default:
 hpx_option(HPX_WITH_TESTS_UNIT BOOL "Build HPX unit tests (default: ON)" ON ADVANCED CATEGORY "Build Targets")
 hpx_option(HPX_WITH_TESTS_HEADERS BOOL "Build HPX header tests (default: OFF)" OFF ADVANCED CATEGORY "Build Targets")
 hpx_option(HPX_WITH_TESTS_EXTERNAL_BUILD BOOL "Build external cmake build tests (default: ON)" ON ADVANCED CATEGORY "Build Targets")
+hpx_option(HPX_WITH_TESTS_EXAMPLES BOOL "Add HPX examples as tests (default: ON)" ON ADVANCED CATEGORY "Build Targets")
 hpx_option(HPX_WITH_TOOLS BOOL "Build HPX tools (default: OFF)" OFF ADVANCED CATEGORY "Build Targets")
 hpx_option(HPX_WITH_RUNTIME BOOL "Build HPX runtime (default: ON)" ON ADVANCED CATEGORY "Build Targets")
 
 hpx_option(HPX_WITH_COMPILE_ONLY_TESTS BOOL
   "Create build system support for compile time only HPX tests (default ON)"
+  ON CATEGORY "Build Targets")
+hpx_option(HPX_WITH_FAIL_COMPILE_TESTS BOOL
+  "Create build system support for fail compile HPX tests (default ON)"
   ON CATEGORY "Build Targets")
 
 # Enable IO-counters on linux systems only
@@ -433,6 +444,13 @@ hpx_option(HPX_WITH_MAX_CPU_COUNT STRING
   CATEGORY "Thread Manager" ADVANCED)
 hpx_add_config_define(HPX_HAVE_MAX_CPU_COUNT ${HPX_WITH_MAX_CPU_COUNT})
 
+set(HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT "4")
+hpx_option(HPX_WITH_MAX_NUMA_DOMAIN_COUNT STRING
+  "HPX applications will not run on machines with more NUMA domains (default: ${HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT})"
+  ${HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT}
+  CATEGORY "Thread Manager" ADVANCED)
+hpx_add_config_define(HPX_HAVE_MAX_NUMA_DOMAIN_COUNT ${HPX_WITH_MAX_NUMA_DOMAIN_COUNT})
+
 set(HPX_MORE_THAN_64_THREADS_DEFAULT OFF)
 if(HPX_WITH_MAX_CPU_COUNT GREATER 64)
   set(HPX_MORE_THAN_64_THREADS_DEFAULT ON)
@@ -488,7 +506,7 @@ if(HPX_WITH_THREAD_BACKTRACE_ON_SUSPENSION)
     OFF
     CATEGORY "Thread Manager" ADVANCED)
   if(HPX_WITH_THREAD_FULLBACKTRACE_ON_SUSPENSION)
-    hpx_add_config_define(HPX_HAVE_THREAD_FULLBAKCTRACE_ON_SUSPENSION)
+    hpx_add_config_define(HPX_HAVE_THREAD_FULLBACKTRACE_ON_SUSPENSION)
   endif()
 endif()
 
@@ -583,9 +601,10 @@ hpx_option(HPX_WITH_APEX BOOL
   "Enable APEX instrumentation support." OFF CATEGORY "Profiling")
 if(HPX_WITH_APEX)
   hpx_add_config_define(HPX_HAVE_APEX)   # tell HPX that we use APEX
-  hpx_add_config_define(APEX_HAVE_HPX)   # tell APEX that we use HPX
   hpx_option(HPX_WITH_APEX_NO_UPDATE BOOL
     "Do not update code from remote APEX repository." OFF CATEGORY "Profiling")
+  hpx_option(HPX_WITH_APEX_TAG STRING
+    "APEX repository tag or branch" "v2.0.1" CATEGORY "Profiling")
 endif()
 hpx_option(HPX_WITH_PAPI BOOL
   "Enable the PAPI based performance counter." OFF CATEGORY "Profiling")
@@ -600,12 +619,26 @@ endif()
 
 hpx_option(HPX_WITH_ITTNOTIFY BOOL
   "Enable Amplifier (ITT) instrumentation support." OFF CATEGORY "Profiling")
+################################################################################
+# enable OpenMP emulation
+################################################################################
+hpx_option(HPX_WITH_HPXMP BOOL
+  "Enable hpxMP OpenMP emulation." OFF CATEGORY "OpenMP")
+if(HPX_WITH_HPXMP)
+  if(NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
+    hpx_option(HPX_WITH_HPXMP_NO_UPDATE BOOL
+      "Do not update code from remote hpxMP repository." OFF CATEGORY "OpenMP")
+  else()
+    hpx_warn("hpxMP can be used only when compiling with clang")
+    set(HPX_WITH_HPXMP OFF)
+  endif()
+endif()
 
 ################################################################################
 # Scheduler configuration
 ################################################################################
 hpx_option(HPX_WITH_THREAD_SCHEDULERS STRING
-  "Which thread schedulers are built. Options are: all, abp-priority, local, static-priority, static. For multiple enabled schedulers, separate with a semicolon (default: all)"
+  "Which thread schedulers are built. Options are: all, abp-priority, local, static-priority, static, shared-priority. For multiple enabled schedulers, separate with a semicolon (default: all)"
   "all"
   CATEGORY "Thread Manager" ADVANCED)
 
@@ -634,6 +667,10 @@ foreach(_scheduler ${HPX_WITH_THREAD_SCHEDULERS_UC})
   if(_scheduler STREQUAL "FFWD" OR _all)
     hpx_add_config_define(HPX_HAVE_FFWD_SCHEDULER)
     set(HPX_WITH_FFWD_SCHEDULER ON CACHE INTERNAL "")
+  endif()
+  if(_scheduler STREQUAL "SHARED-PRIORITY" OR _all)
+    hpx_add_config_define(HPX_HAVE_SHARED_PRIORITY_SCHEDULER)
+    set(HPX_WITH_SHARED_PRIORITY_SCHEDULER ON CACHE INTERNAL "")
   endif()
   unset(_all)
 endforeach()
@@ -861,6 +898,15 @@ if(HPX_WITH_NETWORKING)
     "Enable the parcel coalescing plugin (default: ON)." ON ADVANCED)
   if(HPX_WITH_PARCEL_COALESCING)
     hpx_add_config_define(HPX_HAVE_PARCEL_COALESCING)
+    # Adaptive parcel coalescing related metrics counters are enabled only if both
+    # parcel coalescing plugin and thread idle rate counters are enabled.
+      if(HPX_WITH_THREAD_IDLE_RATES)
+        hpx_option(HPX_WITH_BACKGROUND_THREAD_COUNTERS BOOL
+           "Enable performance counters related to adaptive parcel coalescing (default: OFF)." OFF ADVANCED)
+        if(HPX_WITH_BACKGROUND_THREAD_COUNTERS)
+          hpx_add_config_define(HPX_HAVE_BACKGROUND_THREAD_COUNTERS)
+        endif()
+       endif()
   endif()
 endif()
 
@@ -1019,13 +1065,13 @@ elseif("${HPX_PLATFORM_UC}" STREQUAL "XEONPHI")
     hpx_error("HPX on the MIC can only be compiled with the Intel compiler.")
   endif()
 elseif("${HPX_PLATFORM_UC}" STREQUAL "BLUEGENEQ")
-  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     hpx_error("HPX on the BG/Q can only be compiled with bgclang")
   endif()
   hpx_info("Compiling for BlueGene/Q")
 endif()
 
-if((MSVC14 AND CMAKE_CL_64) OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+if((MSVC14 AND CMAKE_CL_64) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
   hpx_option(HPX_WITH_AWAIT BOOL
       "Enable the use of experimental co_await functionality"
       OFF ADVANCED CATEGORY "LCOs")
@@ -1291,6 +1337,7 @@ if(WIN32)
   hpx_add_config_cond_define(_CRT_NONSTDC_NO_WARNINGS)
   hpx_add_config_cond_define(_WINSOCK_DEPRECATED_NO_WARNINGS)
   hpx_add_config_cond_define(_CRT_NON_CONFORMING_SWPRINTFS)
+  hpx_add_config_cond_define(_SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING)
 
   ##############################################################################
   # Boost
@@ -1519,18 +1566,29 @@ endif()
 ################################################################################
 # Enable integration with Apex event counters
 ################################################################################
-set(_hpx_apex_no_update)
-if(HPX_WITH_APEX_NO_UPDATE)
-  set(_hpx_apex_no_update NO_UPDATE)
-endif()
+
+# reset external source lists
+add_hpx_library_sources_noglob(hpx_external)
+add_hpx_library_headers_noglob(hpx_external)
+
 if(HPX_WITH_APEX)
+  set(_hpx_apex_no_update)
+  if(HPX_WITH_APEX_NO_UPDATE)
+    set(_hpx_apex_no_update NO_UPDATE)
+  endif()
+  set(_hpx_apex_tag "v2.0.1")
+  if(HPX_WITH_APEX_TAG)
+    message("Overriding APEX git tag ${_hpx_apex_tag} with ${HPX_WITH_APEX_TAG}")
+    set(_hpx_apex_tag ${HPX_WITH_APEX_TAG})
+  endif()
+
   # We want to track parent dependencies
   hpx_add_config_define(HPX_HAVE_THREAD_PARENT_REFERENCE)
   # handle APEX library
   include(GitExternal)
   git_external(apex
     https://github.com/khuck/xpress-apex.git
-    v2.0
+    ${_hpx_apex_tag}
     ${_hpx_apex_no_update}
     VERBOSE)
 
@@ -1570,6 +1628,31 @@ if(HPX_WITH_APEX)
     set(HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES
         ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} ittnotify_lib)
   endif()
+endif()
+
+if(HPX_WITH_HPXMP)
+
+  # hpxMP requires ASM support
+  enable_language(ASM)
+  set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
+
+  set(_hpxmp_no_update)
+  if(HPX_WITH_HPXMP_NO_UPDATE)
+    set(_hpxmp_no_update NO_UPDATE)
+  endif()
+
+  # handle hpxMP library
+  include(GitExternal)
+  git_external(hpxmp
+    https://github.com/STEllAR-GROUP/hpxMP.git
+    master
+    ${_hpxmp_no_update}
+    VERBOSE)
+
+  add_subdirectory(hpxmp)
+
+  # make sure thread-local storage is supported
+  hpx_add_config_define(HPX_HAVE_THREAD_LOCAL_STORAGE)
 endif()
 
 if(HPX_WITH_GOOGLE_PERFTOOLS)
@@ -1720,12 +1803,6 @@ endif()
 add_hpx_pseudo_target(core)
 add_subdirectory(src)
 
-if(HPX_WITH_EXAMPLES)
-  add_hpx_pseudo_target(examples)
-  include_directories(examples)
-  add_subdirectory(examples)
-endif()
-
 ###############################################################################
 # Tests
 ###############################################################################
@@ -1745,6 +1822,12 @@ if(HPX_WITH_TESTS)
   add_subdirectory(tests)
 endif()
 
+if(HPX_WITH_EXAMPLES)
+  add_hpx_pseudo_target(examples)
+  include_directories(examples)
+  add_subdirectory(examples)
+endif()
+
 if(HPX_WITH_RUNTIME)
   add_hpx_pseudo_target(runtime)
   add_subdirectory(runtime)
@@ -1758,6 +1841,12 @@ endif()
 # Activate plugins
 ###############################################################################
 add_plugin_modules()
+
+################################################################################
+# Prepare the Build Directory
+################################################################################
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/share)
+
 
 ################################################################################
 # Configure the header to include all compile definitions
