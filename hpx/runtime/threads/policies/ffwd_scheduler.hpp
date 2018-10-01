@@ -3,7 +3,6 @@
 
 
 /// First experiments for ffwd scheduler -> TODO: implement scheduler_base
-
 #include "scheduler_base.hpp"
 
 #include <hpx/config/warnings_prefix.hpp>
@@ -180,4 +179,4 @@ namespace hpx { namespace threads { namespace policies
 
     };
 
-}
+}}}
