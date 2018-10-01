@@ -442,6 +442,10 @@ namespace hpx { namespace resource { namespace detail
         {
             default_scheduler = scheduling_policy::shared_priority;
         }
+        else if (0 == std::string("ffwd").find(cfg_.queuing_))
+        {
+            default_scheduler = scheduling_policy::ffwd;
+        }
         else
         {
             throw hpx::detail::command_line_error(
