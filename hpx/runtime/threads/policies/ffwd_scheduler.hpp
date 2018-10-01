@@ -6,18 +6,13 @@
 
 #include "scheduler_base.hpp"
 
+#include <hpx/config/warnings_prefix.hpp>
+
 namespace hpx { namespace threads { namespace policies
 {
 
     class HPX_EXPORT ffwd_scheduler : public scheduler_base {
 
-
-        ffwd_scheduler() {
-            std::cout << "constructor" << std::endl;
-        }
-        ~ffwd_scheduler() {
-            std::cout << "destructor" << std::endl;
-        }
 
         void suspend(std::size_t num_thread)
         {
@@ -183,6 +178,6 @@ namespace hpx { namespace threads { namespace policies
             std::cout << "reset_thread_distribution not implemented yet" << std::endl;
         }
 
-    }
+    };
 
 }

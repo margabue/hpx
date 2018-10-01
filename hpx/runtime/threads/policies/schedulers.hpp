@@ -11,9 +11,6 @@
 #if defined(HPX_HAVE_LOCAL_SCHEDULER)
 #include <hpx/runtime/threads/policies/local_queue_scheduler.hpp>
 #endif
-#if defined(HPX_HAVE_FFWD_SCHEDULER)
-#include <hpx/runtime/threads/policies/ffwd_scheduler.hpp>
-#endif
 #if defined(HPX_HAVE_STATIC_SCHEDULER)
 #include <hpx/runtime/threads/policies/static_queue_scheduler.hpp>
 #endif
