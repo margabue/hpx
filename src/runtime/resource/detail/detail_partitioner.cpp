@@ -157,6 +157,9 @@ namespace hpx { namespace resource { namespace detail
         case resource::shared_priority:
             sched = "shared_priority";
             break;
+        case resource::ffwd:
+            sched = "ffwd";
+            break;
         }
 
         os << "\"" << sched << "\" is running on PUs : \n";
