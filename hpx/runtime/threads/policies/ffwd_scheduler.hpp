@@ -11,6 +11,66 @@ namespace hpx { namespace threads { namespace policies
 {
 
     class HPX_EXPORT ffwd_scheduler : public scheduler_base {
+    protected:
+        // The maximum number of active threads this thread manager should
+        // create. This number will be a constraint only as long as the work
+        // items queue is not empty. Otherwise the number of active threads
+        // will be incremented in steps equal to the \a min_add_new_count
+        // specified above.
+        // FIXME: this is specified both here, and in thread_queue.
+        enum { max_thread_count = 1000 };
+    public:
+        struct init_parameter
+        {
+            init_parameter()
+              : num_queues_(1),
+                num_high_priority_queues_(1),
+                max_queue_thread_count_(max_thread_count),
+                numa_sensitive_(0),
+                description_("ffwd_scheduler")
+            {}
+
+            init_parameter(std::size_t num_queues,
+                    std::size_t num_high_priority_queues = std::size_t(-1),
+                    std::size_t max_queue_thread_count = max_thread_count,
+                    std::size_t numa_sensitive = 0,
+                    char const* description = "ffwd_scheduler")
+              : num_queues_(num_queues),
+                num_high_priority_queues_(
+                    num_high_priority_queues == std::size_t(-1) ?
+                        num_queues : num_high_priority_queues),
+                max_queue_thread_count_(max_queue_thread_count),
+                numa_sensitive_(numa_sensitive),
+                description_(description)
+            {}
+
+            init_parameter(std::size_t num_queues, char const* description)
+              : num_queues_(num_queues),
+                num_high_priority_queues_(num_queues),
+                max_queue_thread_count_(max_thread_count),
+                numa_sensitive_(false),
+                description_(description)
+            {}
+
+            std::size_t num_queues_;
+            std::size_t num_high_priority_queues_;
+            std::size_t max_queue_thread_count_;
+            std::size_t numa_sensitive_;
+            char const* description_;
+        };
+        typedef init_parameter init_parameter_type;
+
+        ///////////////////////////////////////////////////////////////////////
+        ffwd_scheduler(init_parameter_type const& init) : scheduler_base(init.num_queues_, init.description_)
+        {
+            std::cout << "ffwd_scheduler constructor" << std::endl;
+        }
+
+        ~ffwd_scheduler() {
+            std::cout << "ffwd_scheduler desc" << std::endl;
+        }
+
+        /////////////////////////////////////////////////////////////////////
 
 
         void suspend(std::size_t num_thread)

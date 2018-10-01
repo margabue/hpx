@@ -463,29 +463,6 @@ namespace hpx { namespace threads
                     "'cmake -DHPX_WITH_THREAD_SCHEDULERS=static'.");
 #endif
                 break;
-            case resource::ffwd:
-#if defined(HPX_HAVE_FFWD_SCHEDULER)
-                // set parameters for scheduler and pool instantiation and
-                // TODO: Compatibility checks
-
-                // instantiate the scheduler
-                typedef hpx::threads::policies::ffwd_scheduler<>
-                    local_sched_type;
-                local_sched_type::init_parameter_type init(num_threads_in_pool,
-                    1000, numa_sensitive, "core-ffwd_scheduler");
-                std::unique_ptr<local_sched_type> sched(
-                    new local_sched_type(init));
-
-                // instantiate the pool
-                std::cout << "instantiate pool" << std::endl;
-
-#else
-                throw hpx::detail::command_line_error(
-                    "Command line option --hpx:queuing=ffwd "
-                    "is not configured in this build. Please rebuild with "
-                    "'cmake -DHPX_WITH_THREAD_SCHEDULERS=ffwd'.");
-#endif
-                break;
             }
 
             case resource::static_priority:
@@ -626,6 +603,30 @@ namespace hpx { namespace threads
                     "Command line option --hpx:queuing=shared-priority "
                     "is not configured in this build. Please rebuild with "
                     "'cmake -DHPX_WITH_THREAD_SCHEDULERS=shared-priority'.");
+#endif
+                break;
+            }
+
+            case resource::ffwd:
+            {
+#if defined(HPX_HAVE_FFWD_SCHEDULER)
+                // set parameters for scheduler and pool instantiation and
+                // TODO: Compatibility checks
+
+                // instantiate the scheduler
+                typedef hpx::threads::policies::ffwd_scheduler local_sched_type;
+                local_sched_type::init_parameter_type init;
+                std::unique_ptr<local_sched_type> sched(
+                    new local_sched_type(init));
+
+                // instantiate the pool
+                std::cout << "instantiate pool" << std::endl;
+
+#else
+                throw hpx::detail::command_line_error(
+                    "Command line option --hpx:queuing=ffwd "
+                    "is not configured in this build. Please rebuild with "
+                    "'cmake -DHPX_WITH_THREAD_SCHEDULERS=ffwd'.");
 #endif
                 break;
             }
