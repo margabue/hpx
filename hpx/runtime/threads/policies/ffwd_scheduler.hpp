@@ -9,7 +9,7 @@
 namespace hpx { namespace threads { namespace policies
 {
 
-    class ffwd_scheduler : public scheduler_base {
+    class HPX_EXPORT ffwd_scheduler : public scheduler_base {
 
 
         ffwd_scheduler() {
