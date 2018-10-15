@@ -7,6 +7,9 @@
 
 #include <hpx/config/warnings_prefix.hpp>
 
+#if !defined(HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER)
+#define HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER
+
 namespace hpx { namespace threads { namespace policies
 {
 
@@ -240,3 +243,4 @@ namespace hpx { namespace threads { namespace policies
     };
 
 }}}
+#endif

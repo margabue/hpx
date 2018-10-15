@@ -720,6 +720,7 @@ namespace hpx { namespace threads { namespace policies
         {
             // thread has not been created yet
             if (id) *id = invalid_thread_id;
+            std::cout << "create_thread in thread_queue" << std::endl;
 
             if (run_now)
             {
