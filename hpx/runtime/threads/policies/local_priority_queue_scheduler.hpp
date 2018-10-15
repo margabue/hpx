@@ -475,7 +475,7 @@ namespace hpx { namespace threads { namespace policies
         void create_thread(thread_init_data& data, thread_id_type* id,
             thread_state_enum initial_state, bool run_now, error_code& ec) override
         {
-            std::cout << "create Thread mit func: " << data.func << std::endl;
+            std::cout << "create Thread mit func: " << std::endl;
 
             // NOTE: This scheduler ignores NUMA hints.
             std::size_t num_thread =
