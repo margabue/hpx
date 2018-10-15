@@ -132,6 +132,8 @@ namespace hpx { namespace threads { namespace policies
             victim_threads_.clear();
             victim_threads_.resize(init.num_queues_);
 
+            std::cout << "scheduler cons" << std::endl;
+
             if (!deferred_initialization)
             {
 #if defined(HPX_MSVC)
@@ -473,6 +475,8 @@ namespace hpx { namespace threads { namespace policies
         void create_thread(thread_init_data& data, thread_id_type* id,
             thread_state_enum initial_state, bool run_now, error_code& ec) override
         {
+            std::cout << "create Thread mit func: " << data.func << std::endl;
+
             // NOTE: This scheduler ignores NUMA hints.
             std::size_t num_thread =
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
@@ -534,6 +538,7 @@ namespace hpx { namespace threads { namespace policies
         bool get_next_thread(std::size_t num_thread, bool running,
             std::int64_t& idle_loop_count, threads::thread_data*& thrd) override
         {
+            std::cout << "get_next_thread" << std::endl;
             std::size_t queues_size = queues_.size();
             std::size_t high_priority_queues = high_priority_queues_.size();
 
@@ -608,6 +613,7 @@ namespace hpx { namespace threads { namespace policies
             bool allow_fallback = false,
             thread_priority priority = thread_priority_normal) override
         {
+            std::cout << "schedule_thread" << std::endl;
             // NOTE: This scheduler ignores NUMA hints.
             std::size_t num_thread = std::size_t(-1);
             if (schedulehint.mode == thread_schedule_hint_mode_thread)
@@ -655,6 +661,7 @@ namespace hpx { namespace threads { namespace policies
             bool allow_fallback = false,
             thread_priority priority = thread_priority_normal) override
         {
+            std::cout << "schedule_thread_last" << std::endl;
             // NOTE: This scheduler ignores NUMA hints.
             std::size_t num_thread = std::size_t(-1);
             if (schedulehint.mode == thread_schedule_hint_mode_thread)

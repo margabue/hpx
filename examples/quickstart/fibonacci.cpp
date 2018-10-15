@@ -29,6 +29,8 @@ HPX_PLAIN_ACTION(fibonacci, fibonacci_action);
 //[fib_func
 std::uint64_t fibonacci(std::uint64_t n)
 {
+    std::cout << "hello from fibonacci func" << std::endl;
+
     if (n < 2)
         return n;
 
