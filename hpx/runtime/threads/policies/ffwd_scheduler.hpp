@@ -70,7 +70,7 @@ namespace hpx { namespace threads { namespace policies
         }
 
         ~ffwd_scheduler() {
-            std::cout << "ffwd_scheduler desc" << std::endl;
+            std::cout << "ffwd_scheduler desctructor" << std::endl;
         }
 
         /////////////////////////////////////////////////////////////////////
