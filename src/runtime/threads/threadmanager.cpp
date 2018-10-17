@@ -610,8 +610,6 @@ namespace hpx { namespace threads
             case resource::ffwd:
             {
 #if defined(HPX_HAVE_FFWD_SCHEDULER)
-                // set parameters for scheduler and pool instantiation and
-                // TODO: Compatibility checks
 
                 // instantiate the scheduler
                 typedef hpx::threads::policies::ffwd_scheduler local_sched_type;
@@ -621,6 +619,13 @@ namespace hpx { namespace threads
 
                 // instantiate the pool
                 std::cout << "instantiate pool" << std::endl;
+                std::unique_ptr<thread_pool_base> pool(
+                    new hpx::threads::detail::scheduled_thread_pool<
+                            local_sched_type
+                        >(std::move(sched),
+                        notifier_, i, name.c_str(), scheduler_mode,
+                        thread_offset));
+                pools_.push_back(std::move(pool));
 
 #else
                 throw hpx::detail::command_line_error(
