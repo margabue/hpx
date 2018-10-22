@@ -6,13 +6,19 @@
 #include "scheduler_base.hpp"
 
 #include <hpx/config/warnings_prefix.hpp>
+#include <hpx/compat/mutex.hpp>
+#include <hpx/runtime/threads/policies/thread_queue.hpp>
 
 #if !defined(HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER)
 #define HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER
 
 namespace hpx { namespace threads { namespace policies
 {
-
+    // somehow they used a bunch of typenames that don't make that much sense to me :|
+    template <typename Mutex = compat::mutex,
+    typename PendingQueuing = lockfree_fifo,
+    typename StagedQueuing = lockfree_fifo,
+    typename TerminatedQueuing = lockfree_lifo>
     class HPX_EXPORT ffwd_scheduler : public scheduler_base {
     protected:
         // The maximum number of active threads this thread manager should
@@ -23,6 +29,12 @@ namespace hpx { namespace threads { namespace policies
         // FIXME: this is specified both here, and in thread_queue.
         enum { max_thread_count = 1000 };
     public:
+
+        //this is copied, no idea if it's actually necessary
+        typedef thread_queue<
+            Mutex, PendingQueuing, StagedQueuing, TerminatedQueuing
+        > thread_queue_type;
+
         struct init_parameter
         {
             init_parameter()
@@ -67,6 +79,21 @@ namespace hpx { namespace threads { namespace policies
         ffwd_scheduler(init_parameter_type const& init) : scheduler_base(init.num_queues_, init.description_)
         {
             std::cout << "ffwd_scheduler constructor" << std::endl;
+//            if (!deferred_initialization)
+//            {
+#if defined(HPX_MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4316) // object allocated on the heap may not be aligned 16
+#endif
+                // for now we only have standard queue
+                HPX_ASSERT(init.num_queues_ != 0);
+                for (std::size_t i = 0; i < init.num_queues_; ++i)
+                    queues_[i] = new thread_queue_type(init.max_queue_thread_count_);
+                std::cout << "instantiated queue" << std::endl;
+#if defined(HPX_MSVC)
+#pragma warning(pop)
+#endif
+//            }
         }
 
         ~ffwd_scheduler() {
@@ -239,6 +266,10 @@ namespace hpx { namespace threads { namespace policies
         void reset_thread_distribution() {
             std::cout << "reset_thread_distribution not implemented yet" << std::endl;
         }
+
+
+    protected:
+        std::vector<thread_queue_type*> queues_;
 
     };
 

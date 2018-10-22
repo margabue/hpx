@@ -612,7 +612,7 @@ namespace hpx { namespace threads
 #if defined(HPX_HAVE_FFWD_SCHEDULER)
 
                 // instantiate the scheduler
-                typedef hpx::threads::policies::ffwd_scheduler local_sched_type;
+                typedef hpx::threads::policies::ffwd_scheduler<> local_sched_type;
                 local_sched_type::init_parameter_type init;
                 std::unique_ptr<local_sched_type> sched(
                     new local_sched_type(init));
