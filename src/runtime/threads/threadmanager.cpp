@@ -617,15 +617,16 @@ namespace hpx { namespace threads
                 std::unique_ptr<local_sched_type> sched(
                     new local_sched_type(init));
 
-                // instantiate the pool
+                // instantiate the client thread pool
                 std::cout << "instantiate pool" << std::endl;
-                std::unique_ptr<thread_pool_base> pool(
-                    new hpx::threads::detail::scheduled_thread_pool<
-                            local_sched_type
-                        >(std::move(sched),
-                        notifier_, i, name.c_str(), scheduler_mode,
-                        thread_offset));
-                pools_.push_back(std::move(pool));
+//                std::unique_ptr<thread_pool_base> pool(
+//                    new hpx::threads::detail::scheduled_thread_pool<
+//                            local_sched_type
+//                        >(std::move(sched),
+//                        notifier_, i, name.c_str(), scheduler_mode,
+//                        thread_offset));
+//                pools_.push_back(std::move(pool));
+                std::cout << "pool instantiation left out" << std::endl;
 
 #else
                 throw hpx::detail::command_line_error(
