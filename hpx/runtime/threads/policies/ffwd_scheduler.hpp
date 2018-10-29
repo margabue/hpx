@@ -248,6 +248,11 @@ namespace hpx { namespace threads { namespace policies
 
         void on_start_thread(std::size_t num_thread) {
             std::cout << "on_start_thread not implemented yet: " << num_thread << std::endl;
+
+            HPX_ASSERT(num_thread <= queues_.size());
+            //what does this do?
+            queues_[num_thread]->on_start_thread(num_thread);
+
         }
         void on_stop_thread(std::size_t num_thread) {
             std::cout << "on_stop_thread not implemented yet" << std::endl;
