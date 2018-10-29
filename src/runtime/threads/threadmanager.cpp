@@ -611,13 +611,6 @@ namespace hpx { namespace threads
             {
 #if defined(HPX_HAVE_FFWD_SCHEDULER)
 
-
-                // set parameters for scheduler and pool instantiation and
-                // perform compatibility checks
-                hpx::detail::ensure_high_priority_compatibility(cfg_.vm_);
-                std::string affinity_desc;
-                std::size_t numa_sensitive = hpx::detail::get_affinity_description(cfg_, affinity_desc);
-
                 // instantiate the scheduler
                 typedef hpx::threads::policies::ffwd_scheduler<>
                     local_sched_type;

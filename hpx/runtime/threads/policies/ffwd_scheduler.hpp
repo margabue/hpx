@@ -247,7 +247,7 @@ namespace hpx { namespace threads { namespace policies
         }
 
         void on_start_thread(std::size_t num_thread) {
-            std::cout << "wait_or_add_new not implemented yet" << std::endl;
+            std::cout << "on_start_thread not implemented yet" << std::endl;
         }
         void on_stop_thread(std::size_t num_thread) {
             std::cout << "on_stop_thread not implemented yet" << std::endl;
