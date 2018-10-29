@@ -611,23 +611,28 @@ namespace hpx { namespace threads
             {
 #if defined(HPX_HAVE_FFWD_SCHEDULER)
 
+
+                // set parameters for scheduler and pool instantiation and
+                // perform compatibility checks
+                hpx::detail::ensure_high_priority_compatibility(cfg_.vm_);
+                std::string affinity_desc;
+                std::size_t numa_sensitive = hpx::detail::get_affinity_description(cfg_, affinity_desc);
+
                 // instantiate the scheduler
-                typedef hpx::threads::policies::ffwd_scheduler<> local_sched_type;
+                typedef hpx::threads::policies::ffwd_scheduler<>
+                    local_sched_type;
                 local_sched_type::init_parameter_type init;
                 std::unique_ptr<local_sched_type> sched(
                     new local_sched_type(init));
 
-                // instantiate the client thread pool
+                // instantiate the pool
                 std::cout << "instantiate pool" << std::endl;
-//                std::unique_ptr<thread_pool_base> pool(
-//                    new hpx::threads::detail::scheduled_thread_pool<
-//                            local_sched_type
-//                        >(std::move(sched),
-//                        notifier_, i, name.c_str(), scheduler_mode,
-//                        thread_offset));
-//                pools_.push_back(std::move(pool));
-                std::cout << "pool instantiation left out" << std::endl;
-
+                std::unique_ptr<thread_pool_base> pool(
+                    new hpx::threads::detail::scheduled_thread_pool<local_sched_type>(std::move(sched),
+                        notifier_, i, name.c_str(), scheduler_mode,
+                        thread_offset));
+                pools_.push_back(std::move(pool));
+                std::cout << "instantiated pool" << std::endl;
 #else
                 throw hpx::detail::command_line_error(
                     "Command line option --hpx:queuing=ffwd "

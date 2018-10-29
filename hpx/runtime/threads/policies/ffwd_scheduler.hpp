@@ -9,6 +9,8 @@
 #include <hpx/compat/mutex.hpp>
 #include <hpx/runtime/threads/policies/thread_queue.hpp>
 
+#include <vector>
+
 #if !defined(HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER)
 #define HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER
 
@@ -30,7 +32,7 @@ namespace hpx { namespace threads { namespace policies
         enum { max_thread_count = 1000 };
     public:
 
-        //this is copied, no idea if it's actually necessary
+        //this is copied
         typedef thread_queue<
             Mutex, PendingQueuing, StagedQueuing, TerminatedQueuing
         > thread_queue_type;
@@ -87,8 +89,9 @@ namespace hpx { namespace threads { namespace policies
 #endif
                 // for now we only have standard queue
                 HPX_ASSERT(init.num_queues_ != 0);
-                for (std::size_t i = 0; i < init.num_queues_; ++i)
-                    queues_[i] = new thread_queue_type(init.max_queue_thread_count_);
+                for (std::size_t i = 0; i < init.num_queues_; ++i) {
+                    queues_.push_back(new thread_queue_type(init.max_queue_thread_count_));
+                }
                 std::cout << "instantiated queue" << std::endl;
 #if defined(HPX_MSVC)
 #pragma warning(pop)
@@ -97,11 +100,15 @@ namespace hpx { namespace threads { namespace policies
         }
 
         ~ffwd_scheduler() {
-            std::cout << "ffwd_scheduler desctructor - now i'm going to die..." << std::endl;
+            queues_.clear();
+            std::cout << "ffwd_scheduler desctructor" << std::endl;
         }
 
         /////////////////////////////////////////////////////////////////////
 
+        std::string get_scheduler_name() {
+            return "ffwd_scheduler";
+        }
 
         void suspend(std::size_t num_thread)
         {

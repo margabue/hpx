@@ -60,3 +60,11 @@ template class HPX_EXPORT hpx::threads::policies::shared_priority_queue_schedule
 template class HPX_EXPORT hpx::threads::detail::scheduled_thread_pool<
     hpx::threads::policies::shared_priority_queue_scheduler<>>;
 #endif
+
+#if defined(HPX_HAVE_FFWD_SCHEDULER)
+#include <hpx/runtime/threads/policies/ffwd_scheduler.hpp>
+template class HPX_EXPORT hpx::threads::policies::ffwd_scheduler<>;
+template class HPX_EXPORT hpx::threads::detail::scheduled_thread_pool<
+    hpx::threads::policies::ffwd_scheduler<>>;
+#endif
+
