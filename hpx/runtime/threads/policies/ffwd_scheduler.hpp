@@ -247,17 +247,17 @@ namespace hpx { namespace threads { namespace policies
             return false;
         }
 
-        void on_start_thread(std::size_t num_thread) {
-            std::cout << "on_start_thread not implemented yet: " << num_thread << std::endl;
-
+        void on_start_thread(std::size_t num_thread)
+        {
+            // on_start_thread: Calls callback and steals work if it can (local)
             if (nullptr == queues_[num_thread])
             {
                 queues_[num_thread] =
                     new thread_queue_type(max_queue_thread_count_);
             }
-            //what does this do?
             queues_[num_thread]->on_start_thread(num_thread);
-            std::cout << "on_start_thread in queue called" << std::endl;
+
+            // TODO add work-stealing here
 
         }
         void on_stop_thread(std::size_t num_thread) {
