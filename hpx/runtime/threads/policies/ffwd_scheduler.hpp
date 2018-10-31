@@ -252,7 +252,7 @@ namespace hpx { namespace threads { namespace policies
             HPX_ASSERT(num_thread <= queues_.size());
             //what does this do?
             queues_[num_thread]->on_start_thread(num_thread);
-            std::cout << "on_start_thread in queue called" << num_thread << std::endl;
+            std::cout << "on_start_thread in queue called" << std::endl;
 
         }
         void on_stop_thread(std::size_t num_thread) {

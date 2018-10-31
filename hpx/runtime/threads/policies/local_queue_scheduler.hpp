@@ -833,8 +833,9 @@ namespace hpx { namespace threads { namespace policies
                 queues_[num_thread] =
                     new thread_queue_type(max_queue_thread_count_);
             }
-
+            std::cout << "on_start_thread" << std::endl;
             queues_[num_thread]->on_start_thread(num_thread);
+            std::cout << "on_start_thread in queue call finished" << std::endl;
 
             auto const& rp = resource::get_partitioner();
             auto const& topo = rp.get_topology();

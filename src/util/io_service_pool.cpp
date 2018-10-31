@@ -34,7 +34,7 @@ namespace hpx { namespace util
             char const* pool_name, char const* name_postfix)
       : next_io_service_(0), stopped_(false),
         pool_size_(pool_size),
-        on_start_thread_(on_start_thread),
+       on_start_thread_(on_start_thread),
         on_stop_thread_(on_stop_thread),
         pool_name_(pool_name), pool_name_postfix_(name_postfix),
         waiting_(false), wait_barrier_(pool_size + 1),
