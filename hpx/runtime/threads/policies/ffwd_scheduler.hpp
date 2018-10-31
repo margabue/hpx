@@ -21,7 +21,8 @@ namespace hpx { namespace threads { namespace policies
     typename PendingQueuing = lockfree_fifo,
     typename StagedQueuing = lockfree_fifo,
     typename TerminatedQueuing = lockfree_lifo>
-    class HPX_EXPORT ffwd_scheduler : public scheduler_base {
+    class HPX_EXPORT ffwd_scheduler : public scheduler_base
+    {
     protected:
         // The maximum number of active threads this thread manager should
         // create. This number will be a constraint only as long as the work
