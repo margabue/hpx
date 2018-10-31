@@ -289,6 +289,7 @@ namespace hpx { namespace threads { namespace policies
 
     protected:
         std::vector<thread_queue_type*> queues_;
+        std::size_t max_queue_thread_count_;
 
     };
 
