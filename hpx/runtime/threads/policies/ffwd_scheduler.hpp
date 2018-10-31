@@ -214,6 +214,9 @@ namespace hpx { namespace threads { namespace policies
         void create_thread(thread_init_data& data, thread_id_type* id,
                                    thread_state_enum initial_state, bool run_now, error_code& ec) {
             std::cout << "create_thread not implemented yet" << std::endl;
+            HPX_ASSERT(num_thread < queue_size);
+            queues_[num_thread]->create_thread(data, id, initial_state,
+                run_now, ec);
         }
 
         bool get_next_thread(std::size_t num_thread, bool running,
