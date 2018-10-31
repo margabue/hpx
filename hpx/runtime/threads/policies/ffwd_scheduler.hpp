@@ -41,7 +41,7 @@ namespace hpx { namespace threads { namespace policies
         struct init_parameter
         {
             init_parameter()
-              : num_queues_(4),
+              : num_queues_(1),
                 num_high_priority_queues_(1),
                 max_queue_thread_count_(max_thread_count),
                 numa_sensitive_(0),
