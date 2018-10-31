@@ -299,6 +299,7 @@ namespace hpx { namespace threads { namespace policies
         void create_thread(thread_init_data& data, thread_id_type* id,
             thread_state_enum initial_state, bool run_now, error_code& ec)
         {
+            std::cout << "create_thread called" << std::endl;
             std::size_t num_thread =
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
                 data.schedulehint.hint : std::size_t(-1);
@@ -836,41 +837,41 @@ namespace hpx { namespace threads { namespace policies
             std::cout << "on_start_thread" << std::endl;
             queues_[num_thread]->on_start_thread(num_thread);
 
-//            auto const& rp = resource::get_partitioner();
-//            auto const& topo = rp.get_topology();
+            auto const& rp = resource::get_partitioner();
+            auto const& topo = rp.get_topology();
 
-//            // pre-calculate certain constants for the given thread number
-//            std::size_t num_pu = rp.get_affinity_data().get_pu_num(num_thread);
-//            mask_cref_type machine_mask = topo.get_machine_affinity_mask();
-//            mask_cref_type core_mask = topo.get_thread_affinity_mask(num_pu);
-//            mask_cref_type node_mask = topo.get_numa_node_affinity_mask(num_pu);
+            // pre-calculate certain constants for the given thread number
+            std::size_t num_pu = rp.get_affinity_data().get_pu_num(num_thread);
+            mask_cref_type machine_mask = topo.get_machine_affinity_mask();
+            mask_cref_type core_mask = topo.get_thread_affinity_mask(num_pu);
+            mask_cref_type node_mask = topo.get_numa_node_affinity_mask(num_pu);
 
-//            if (any(core_mask) && any(node_mask))
-//            {
-//#if !defined(HPX_NATIVE_MIC)        // we know that the MIC has one NUMA domain only
-//                set(steals_in_numa_domain_, num_pu);
-//#endif
-//                numa_domain_masks_[num_thread] = node_mask;
-//            }
+            if (any(core_mask) && any(node_mask))
+            {
+#if !defined(HPX_NATIVE_MIC)        // we know that the MIC has one NUMA domain only
+                set(steals_in_numa_domain_, num_pu);
+#endif
+                numa_domain_masks_[num_thread] = node_mask;
+            }
 
-//            // we allow the thread on the boundary of the NUMA domain to steal
-//            mask_type first_mask = mask_type();
-//            resize(first_mask, mask_size(core_mask));
+            // we allow the thread on the boundary of the NUMA domain to steal
+            mask_type first_mask = mask_type();
+            resize(first_mask, mask_size(core_mask));
 
-//            std::size_t first = find_first(node_mask);
-//            if (first != std::size_t(-1))
-//                set(first_mask, first);
-//            else
-//                first_mask = core_mask;
+            std::size_t first = find_first(node_mask);
+            if (first != std::size_t(-1))
+                set(first_mask, first);
+            else
+                first_mask = core_mask;
 
-//            if (numa_sensitive_ != 2 && any(first_mask & core_mask))
-//            {
-//#if !defined(HPX_NATIVE_MIC)        // we know that the MIC has one NUMA domain only
-//                set(steals_outside_numa_domain_, num_pu);
-//#endif
-//                outside_numa_domain_masks_[num_thread] =
-//                    not_(node_mask) & machine_mask;
-//            }
+            if (numa_sensitive_ != 2 && any(first_mask & core_mask))
+            {
+#if !defined(HPX_NATIVE_MIC)        // we know that the MIC has one NUMA domain only
+                set(steals_outside_numa_domain_, num_pu);
+#endif
+                outside_numa_domain_masks_[num_thread] =
+                    not_(node_mask) & machine_mask;
+            }
         }
 
         void on_stop_thread(std::size_t num_thread)
