@@ -1093,7 +1093,9 @@ namespace hpx { namespace threads { namespace policies
         }
 
         ///////////////////////////////////////////////////////////////////////
-        void on_start_thread(std::size_t num_thread) {}
+        void on_start_thread(std::size_t num_thread) {
+            std::cout << "hello in queue" << std::endl;
+        }
         void on_stop_thread(std::size_t num_thread) {}
         void on_error(std::size_t num_thread, std::exception_ptr const& e) {}
 
