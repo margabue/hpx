@@ -297,11 +297,11 @@ namespace hpx { namespace threads { namespace policies
             std::size_t num_thread = std::size_t(-1)) const = 0;
 #endif
 
-        void start_periodic_maintenance(
-            std::atomic<hpx::state>& /*global_state*/)
-        {
-            std::cout << "start_periodic_maintenance not implemented yet" << std::endl;
-        }
+//        void start_periodic_maintenance(
+//            std::atomic<hpx::state>& /*global_state*/)
+//        {
+//            std::cout << "start_periodic_maintenance not implemented yet" << std::endl;
+//        }
 
         void reset_thread_distribution() {
             std::cout << "reset_thread_distribution not implemented yet" << std::endl;
