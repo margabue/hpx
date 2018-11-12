@@ -200,12 +200,18 @@ namespace hpx { namespace threads { namespace policies
         }
 
         bool cleanup_terminated(bool delete_all) {
-            std::cout << "cleanup_terminated not implemented yet" << std::endl;
+            if(!doneit4) {
+                std::cout << "cleanup_terminated not implemented yet" << std::endl;
+                doneit4 = true;
+            }
             return true;
         }
 
         bool cleanup_terminated(std::size_t num_thread, bool delete_all) {
-            std::cout << "cleanup_terminated not implemented yet" << std::endl;
+            if(!doneit4) {
+                std::cout << "cleanup_terminated not implemented yet" << std::endl;
+                doneit4 = true;
+            }
             return true;
         }
 
@@ -308,6 +314,7 @@ namespace hpx { namespace threads { namespace policies
         bool doneit = true;
         bool doneit2 = true;
         bool doneit3 = true;
+        bool doneit4 = true;
     };
 
 }}}
