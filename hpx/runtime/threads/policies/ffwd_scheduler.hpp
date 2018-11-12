@@ -231,7 +231,7 @@ namespace hpx { namespace threads { namespace policies
             std::int64_t& idle_loop_count, threads::thread_data*& thrd){
             if(!doneit3) {
                 std::cout << "get_next_thread not implemented yet" << std::endl;
-                doneit3 = false;
+                doneit3 = true;
             }
             return false;
         }
