@@ -230,10 +230,24 @@ namespace hpx { namespace threads { namespace policies
         bool get_next_thread(std::size_t num_thread, bool running,
             std::int64_t& idle_loop_count, threads::thread_data*& thrd){
             if(!doneit3) {
-                std::cout << "get_next_thread not implemented yet" << std::endl;
+                std::cout << "get_next_thread dummy implemented" << std::endl;
                 doneit3 = true;
             }
-            return false;
+            HPX_ASSERT(num_thread < queues_.size());
+            thread_queue_type* q = queues_[num_thread];
+            bool result = q->get_next_thread(thrd);
+
+            q->increment_num_pending_accesses();
+            if (result)
+                return true;
+            q->increment_num_pending_misses();
+
+            bool have_staged =
+                q->get_staged_queue_length(std::memory_order_relaxed) != 0;
+
+            // Give up, we should have work to convert.
+            if (have_staged)
+                return false;
         }
 
         void schedule_thread(threads::thread_data* thrd,
