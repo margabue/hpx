@@ -216,8 +216,8 @@ namespace hpx { namespace threads { namespace policies
         }
 
         void create_thread(thread_init_data& data, thread_id_type* id,
-                                   thread_state_enum initial_state, bool run_now, error_code& ec) {
-            std::cout << "create_thread not implemented yet" << std::endl;
+                                   thread_state_enum initial_state, bool run_now, error_code& ec)
+        {
             std::size_t num_thread =
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
                 data.schedulehint.hint : std::size_t(-1);
@@ -311,10 +311,10 @@ namespace hpx { namespace threads { namespace policies
     protected:
         std::vector<thread_queue_type*> queues_;
         std::size_t max_queue_thread_count_;
-        bool doneit = true;
-        bool doneit2 = true;
-        bool doneit3 = true;
-        bool doneit4 = true;
+        bool doneit = false;
+        bool doneit2 = false;
+        bool doneit3 = false;
+        bool doneit4 = false;
     };
 
 }}}
