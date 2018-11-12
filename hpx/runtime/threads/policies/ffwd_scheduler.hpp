@@ -223,7 +223,10 @@ namespace hpx { namespace threads { namespace policies
 
         bool get_next_thread(std::size_t num_thread, bool running,
             std::int64_t& idle_loop_count, threads::thread_data*& thrd){
-            std::cout << "get_next_thread not implemented yet" << std::endl;
+            if(!doneit3) {
+                std::cout << "get_next_thread not implemented yet" << std::endl;
+                doneit3 = false;
+            }
             return false;
         }
 
@@ -304,7 +307,7 @@ namespace hpx { namespace threads { namespace policies
         std::size_t max_queue_thread_count_;
         bool doneit = true;
         bool doneit2 = true;
-
+        bool doneit3 = true;
     };
 
 }}}
