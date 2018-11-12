@@ -248,6 +248,7 @@ namespace hpx { namespace threads { namespace policies
             // Give up, we should have work to convert.
             if (have_staged)
                 return false;
+            return false;
         }
 
         void schedule_thread(threads::thread_data* thrd,
