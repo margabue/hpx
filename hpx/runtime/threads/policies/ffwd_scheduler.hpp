@@ -81,7 +81,6 @@ namespace hpx { namespace threads { namespace policies
         ///////////////////////////////////////////////////////////////////////
         ffwd_scheduler(init_parameter_type const& init) : scheduler_base(init.num_queues_, init.description_)
         {
-            std::cout << "ffwd_scheduler constructor" << std::endl;
 //            if (!deferred_initialization)
 //            {
 #if defined(HPX_MSVC)
@@ -93,7 +92,6 @@ namespace hpx { namespace threads { namespace policies
                 for (std::size_t i = 0; i < init.num_queues_; ++i) {
                     queues_.push_back(new thread_queue_type(init.max_queue_thread_count_));
                 }
-                std::cout << "instantiated queue" << std::endl;
 #if defined(HPX_MSVC)
 #pragma warning(pop)
 #endif
@@ -240,7 +238,10 @@ namespace hpx { namespace threads { namespace policies
             threads::thread_schedule_hint schedulehint,
             bool allow_fallback = false,
                                   thread_priority priority = thread_priority_normal) {
-            std::cout << "schedule_thread_last not implemented yet" << std::endl;
+            if(!doneit) {
+                std::cout << "schedule_thread_last not implemented yet" << std::endl;
+                doneit = true;
+            }
         }
 
         void destroy_thread(threads::thread_data* thrd,
@@ -250,7 +251,10 @@ namespace hpx { namespace threads { namespace policies
 
         bool wait_or_add_new(std::size_t num_thread, bool running,
                              std::int64_t& idle_loop_count) {
-            std::cout << "wait_or_add_new not implemented yet" << std::endl;
+            if(!doneit2) {
+                std::cout << "wait_or_add_new not implemented yet" << std::endl;
+                doneit2 = true;
+            }
             return false;
         }
 
@@ -298,6 +302,8 @@ namespace hpx { namespace threads { namespace policies
     protected:
         std::vector<thread_queue_type*> queues_;
         std::size_t max_queue_thread_count_;
+        bool doneit = true;
+        bool doneit2 = true;
 
     };
 
