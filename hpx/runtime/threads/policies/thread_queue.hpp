@@ -757,7 +757,6 @@ namespace hpx { namespace threads { namespace policies
 
                     // return the thread_id of the newly created thread
                     if (id) *id = thrd;
-                    std::cout << "created thread with id: " << id << std::endl;
 
                     if (&ec != &throws)
                         ec = make_success_code();
@@ -847,7 +846,7 @@ namespace hpx { namespace threads { namespace policies
         {
             std::int64_t work_items_count =
                 work_items_count_.load(std::memory_order_relaxed);
-
+            std::cout << "get_next_thread in queue" << std::endl;
             if (allow_stealing && min_tasks_to_steal_pending > work_items_count)
             {
                 return false;
