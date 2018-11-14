@@ -33,7 +33,7 @@ namespace hpx { namespace threads { namespace policies
         enum { max_thread_count = 1000 };
     public:
 
-        //this is copied
+        //this is copied, could easily be done differently
         typedef thread_queue<
             Mutex, PendingQueuing, StagedQueuing, TerminatedQueuing
         > thread_queue_type;
@@ -174,7 +174,7 @@ namespace hpx { namespace threads { namespace policies
 
         std::int64_t get_queue_length(
             std::size_t num_thread = std::size_t(-1)) const {
-            std::cout << "get_queue_length called" << std::endl;
+            std::cout << "get_queue_length not implemented yet" << std::endl;
             return 1;
         }
 
@@ -183,7 +183,7 @@ namespace hpx { namespace threads { namespace policies
             thread_priority priority = thread_priority_default,
             std::size_t num_thread = std::size_t(-1),
             bool reset = false) const {
-            std::cout << "get_thread_count called" << std::endl;
+            std::cout << "get_thread_count not implemented yet" << std::endl;
             return 1;
         }
 
@@ -221,6 +221,7 @@ namespace hpx { namespace threads { namespace policies
             std::size_t num_thread =
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
                 data.schedulehint.hint : std::size_t(-1);
+
 
             HPX_ASSERT(num_thread < queues_.size());
             queues_[num_thread]->create_thread(data, id, initial_state,

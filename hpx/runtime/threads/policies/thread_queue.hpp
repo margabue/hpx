@@ -757,6 +757,7 @@ namespace hpx { namespace threads { namespace policies
 
                     // return the thread_id of the newly created thread
                     if (id) *id = thrd;
+                    std::cout << "created thread with id: " << id << std::endl;
 
                     if (&ec != &throws)
                         ec = make_success_code();
