@@ -10,9 +10,60 @@
 #include <hpx/runtime/threads/policies/thread_queue.hpp>
 
 #include <vector>
+#include <thread>
+#include <queue>
 
 #if !defined(HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER)
 #define HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER
+
+namespace hpx { namespace threads { namespace policies {
+
+struct server_request_type {
+    // requests hold a function and possible arguments for that function
+    server_request_type(server_request_type & other) {}
+    server_request_type() {}
+    ~server_request_type() {}
+};
+
+struct server_response_type {
+    // function value
+
+};
+
+struct ffwd_thread {
+    ffwd_thread()
+    {
+    }
+
+    ffwd_thread(const ffwd_thread &other)
+    {
+        request_nr = other.request_nr;
+        std::cout << "ffwd copy const" << std::endl;
+    }
+
+    ffwd_thread(bool server, int request_number_per_run) {
+        if(server) {
+            request_nr = request_number_per_run;
+            std::cout << "server thread requested" << std::endl;
+        } else {
+            std::cout << "client_thread not implemented yet" << std::endl;
+        }
+    }
+
+    ffwd_thread &operator=(const ffwd_thread & other) {
+        request_nr = other.request_nr;
+        std::cout << "operator = ffwd_thread" << std::endl;
+        return *this;
+    }
+    // threshold for requesthandling
+    int request_nr = 0;
+    std::vector<server_request_type> requests;
+    std::vector<server_response_type> response;
+    std::atomic<int> request_counter = 0;
+};
+
+
+}}}
 
 namespace hpx { namespace threads { namespace policies
 {
@@ -33,11 +84,11 @@ namespace hpx { namespace threads { namespace policies
         enum { max_thread_count = 1000 };
     public:
 
-        //this is copied, could easily be done differently
         typedef thread_queue<
             Mutex, PendingQueuing, StagedQueuing, TerminatedQueuing
         > thread_queue_type;
 
+        //this is copied, could easily be done differently
         struct init_parameter
         {
             init_parameter()
@@ -92,6 +143,10 @@ namespace hpx { namespace threads { namespace policies
                 for (std::size_t i = 0; i < init.num_queues_; ++i) {
                     queues_.push_back(new thread_queue_type(init.max_queue_thread_count_));
                 }
+
+                // plus one extra thread, that plays the server
+                // with his respecting request and answer queues -> both fifo
+                server = new ffwd_thread(true, 2);
 #if defined(HPX_MSVC)
 #pragma warning(pop)
 #endif
@@ -234,21 +289,21 @@ namespace hpx { namespace threads { namespace policies
                 std::cout << "get_next_thread dummy implemented" << std::endl;
                 doneit3 = true;
             }
-            HPX_ASSERT(num_thread < queues_.size());
-            thread_queue_type* q = queues_[num_thread];
-            bool result = q->get_next_thread(thrd);
+//            HPX_ASSERT(num_thread < queues_.size());
+//            thread_queue_type* q = queues_[num_thread];
+//            bool result = q->get_next_thread(thrd);
 
-            q->increment_num_pending_accesses();
-            if (result)
-                return true;
-            q->increment_num_pending_misses();
+//            q->increment_num_pending_accesses();
+//            if (result)
+//                return true;
+//            q->increment_num_pending_misses();
 
-            bool have_staged =
-                q->get_staged_queue_length(std::memory_order_relaxed) != 0;
+//            bool have_staged =
+//                q->get_staged_queue_length(std::memory_order_relaxed) != 0;
 
-            // Give up, we should have work to convert.
-            if (have_staged)
-                return false;
+//            // Give up, we should have work to convert.
+//            if (have_staged)
+//                return false;
             return false;
         }
 
@@ -331,6 +386,8 @@ namespace hpx { namespace threads { namespace policies
         bool doneit2 = false;
         bool doneit3 = false;
         bool doneit4 = false;
+
+        ffwd_thread *server;
     };
 
 }}}
