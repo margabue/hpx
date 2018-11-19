@@ -16,6 +16,8 @@
 #if !defined(HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER)
 #define HPX_THREADMANAGER_SCHEDULING_FFWD_SCHEDULER
 
+
+// TODO: find a better place for this, and flesh out
 namespace hpx { namespace threads { namespace policies {
 
 struct server_request_type {
@@ -57,8 +59,8 @@ struct ffwd_thread {
     }
     // threshold for requesthandling
     int request_nr = 0;
-    std::vector<server_request_type> requests;
-    std::vector<server_response_type> response;
+    std::vector<server_request_type *> requests; // Queue would be nicer for FIFO, but is not threadsafe. In Vector every client thread only writes at his own id
+    std::vector<server_response_type *> response; // Response as vector, so that every client thread can read at own id
     std::atomic<int> request_counter = 0;
 };
 
@@ -382,6 +384,8 @@ namespace hpx { namespace threads { namespace policies
     protected:
         std::vector<thread_queue_type*> queues_;
         std::size_t max_queue_thread_count_;
+
+        // TODO remove
         bool doneit = false;
         bool doneit2 = false;
         bool doneit3 = false;
