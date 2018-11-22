@@ -134,6 +134,7 @@ namespace hpx { namespace threads { namespace policies
             resize(steals_in_numa_domain_, init.num_queues_);
             resize(steals_outside_numa_domain_, init.num_queues_);
 #endif
+            std::cout << "local_queue cons" << std::endl;
             if (!deferred_initialization)
             {
                 HPX_ASSERT(init.num_queues_ != 0);
