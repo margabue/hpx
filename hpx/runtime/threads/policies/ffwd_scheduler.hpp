@@ -61,7 +61,7 @@ struct ffwd_thread {
     int request_nr = 0;
     std::vector<server_request_type *> requests; // Queue would be nicer for FIFO, but isn't threadsafe. In vector every client thread only writes at his own id, otherwise not thread-safe.
     std::vector<server_response_type *> response; // Response as vector, so that every client thread can read at own id
-    std::atomic<int> request_counter = 0;
+    std::atomic<int> request_counter;
 };
 
 
