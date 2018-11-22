@@ -59,7 +59,7 @@ struct ffwd_thread {
     }
     // threshold for requesthandling
     int request_nr = 0;
-    std::vector<server_request_type *> requests; // Queue would be nicer for FIFO, but is not threadsafe. In Vector every client thread only writes at his own id
+    std::vector<server_request_type *> requests; // Queue would be nicer for FIFO, but isn't threadsafe. In vector every client thread only writes at his own id, otherwise not thread-safe.
     std::vector<server_response_type *> response; // Response as vector, so that every client thread can read at own id
     std::atomic<int> request_counter = 0;
 };
@@ -143,7 +143,7 @@ namespace hpx { namespace threads { namespace policies
                 // for now we only have standard queue
                 HPX_ASSERT(init.num_queues_ != 0);
                 for (std::size_t i = 0; i < init.num_queues_; ++i) {
-                    queues_.push_back(new thread_queue_type(init.max_queue_thread_count_));
+                    queues_.push_back(ffwd_thread(false, init.num_queues_));
                 }
 
                 // plus one extra thread, that plays the server
@@ -279,10 +279,10 @@ namespace hpx { namespace threads { namespace policies
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
                 data.schedulehint.hint : std::size_t(-1);
 
-
             HPX_ASSERT(num_thread < queues_.size());
-            queues_[num_thread]->create_thread(data, id, initial_state,
-                run_now, ec);
+            queues_[num_thread] = ffwd_thread(false, 1);
+//            queues_[num_thread]->create_thread(data, id, initial_state,
+//                run_now, ec);
         }
 
         bool get_next_thread(std::size_t num_thread, bool running,
@@ -343,12 +343,11 @@ namespace hpx { namespace threads { namespace policies
         void on_start_thread(std::size_t num_thread)
         {
             // on_start_thread: Calls callback and steals work if it can (local)
-            if (nullptr == queues_[num_thread])
-            {
-                queues_[num_thread] =
-                    new thread_queue_type(max_queue_thread_count_);
-            }
-            queues_[num_thread]->on_start_thread(num_thread);
+//            if(!queues_[num_thread]) {
+//                std::cout << "on_start_thread called on empty space" << std::endl;
+//                return;
+//            }
+//            queues_[num_thread]->on_start_thread(num_thread);
 
             // TODO add work-stealing here
 
@@ -382,7 +381,7 @@ namespace hpx { namespace threads { namespace policies
 
 
     protected:
-        std::vector<thread_queue_type*> queues_;
+        std::vector<ffwd_thread> queues_;
         std::size_t max_queue_thread_count_;
 
         // TODO remove

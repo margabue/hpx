@@ -177,7 +177,6 @@ namespace hpx
 
         // now create all threadmanager pools
         thread_manager_->create_pools();
-
         // this initializes the used_processing_units_ mask
         thread_manager_->init();
 

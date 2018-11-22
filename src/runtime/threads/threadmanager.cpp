@@ -627,7 +627,9 @@ namespace hpx { namespace threads
                         notifier_, i, name.c_str(), scheduler_mode,
                         thread_offset));
                 pools_.push_back(std::move(pool));
-                std::cout << "instantiated pool" << std::endl;
+                std::ostream &out = std::cout;
+                print_pools(out);
+
 #else
                 throw hpx::detail::command_line_error(
                     "Command line option --hpx:queuing=ffwd "
