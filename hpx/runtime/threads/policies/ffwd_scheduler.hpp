@@ -32,7 +32,7 @@ struct server_response_type {
 
 };
 
-struct ffwd_thread {
+struct ffwd_thread { // placeholder for correct thread type => pthread?
     ffwd_thread()
     {
     }
@@ -40,10 +40,9 @@ struct ffwd_thread {
     ffwd_thread(const ffwd_thread &other)
     {
         request_nr = other.request_nr;
-        std::cout << "ffwd copy const" << std::endl;
     }
 
-    ffwd_thread(bool server, int request_number_per_run) {
+    ffwd_thread(bool server, int request_number_per_run): server(server) {
         if(server) {
             request_nr = request_number_per_run;
             std::cout << "server thread requested" << std::endl;
@@ -54,14 +53,33 @@ struct ffwd_thread {
 
     ffwd_thread &operator=(const ffwd_thread & other) {
         request_nr = other.request_nr;
-        std::cout << "operator = ffwd_thread" << std::endl;
         return *this;
     }
+
+    void ffwd_routine ()
+    {
+        if(server)
+        {
+            while(true) { // TODO: Needs to be some kind of deadlock detection instead here
+                // Listen for client messages
+                for(server_request_type * tmp : requests) {
+                    std::cout << "server got request " << tmp << std::endl;
+                }
+                // Do work
+                // Put out response
+                break;
+            }
+        } else {
+            // client thread behavior here
+        }
+    }
+
     // threshold for requesthandling
     int request_nr = 0;
     std::vector<server_request_type *> requests; // Queue would be nicer for FIFO, but isn't threadsafe. In vector every client thread only writes at his own id, otherwise not thread-safe.
     std::vector<server_response_type *> response; // Response as vector, so that every client thread can read at own id
     std::atomic<int> request_counter;
+    bool server = false;
 };
 
 
@@ -279,8 +297,9 @@ namespace hpx { namespace threads { namespace policies
                 data.schedulehint.mode == thread_schedule_hint_mode_thread ?
                 data.schedulehint.hint : std::size_t(-1);
 
-            HPX_ASSERT(num_thread < queues_.size());
-            queues_[num_thread] = ffwd_thread(false, 1);
+            if(num_thread < queues_.size()) {
+                queues_[num_thread] = ffwd_thread(false, 1);
+            }
 //            queues_[num_thread]->create_thread(data, id, initial_state,
 //                run_now, ec);
         }
@@ -342,6 +361,7 @@ namespace hpx { namespace threads { namespace policies
 
         void on_start_thread(std::size_t num_thread)
         {
+            std::cout << "on start thread" << std::endl;
             // on_start_thread: Calls callback and steals work if it can (local)
 //            if(!queues_[num_thread]) {
 //                std::cout << "on_start_thread called on empty space" << std::endl;
@@ -349,9 +369,12 @@ namespace hpx { namespace threads { namespace policies
 //            }
 //            queues_[num_thread]->on_start_thread(num_thread);
 
+            queues_[num_thread].ffwd_routine();
+
             // TODO add work-stealing here
 
         }
+
         void on_stop_thread(std::size_t num_thread) {
             std::cout << "on_stop_thread not implemented yet" << std::endl;
         }
