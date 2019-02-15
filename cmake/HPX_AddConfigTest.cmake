@@ -214,6 +214,14 @@ function(hpx_check_for_cxx11_alias_templates)
 endfunction()
 
 ###############################################################################
+function(hpx_check_for_cxx11_alignas)
+  add_hpx_config_test(HPX_WITH_CXX11_ALIGNAS
+    SOURCE cmake/tests/cxx11_alignas.cpp
+    FILE ${ARGN}
+    CMAKECXXFEATURE cxx_alignas)
+endfunction()
+
+###############################################################################
 function(hpx_check_for_cxx11_auto)
   add_hpx_config_test(HPX_WITH_CXX11_AUTO
     SOURCE cmake/tests/cxx11_auto.cpp
@@ -388,6 +396,11 @@ endfunction()
 
 ###############################################################################
 function(hpx_check_for_cxx11_std_atomic)
+  # Make sure HPX_HAVE_LIBATOMIC is removed from the cache if necessary
+  if(NOT HPX_WITH_CXX11_ATOMIC)
+    unset(HPX_HAVE_LIBATOMIC CACHE)
+  endif()
+
   # Sometimes linking against libatomic is required for atomic ops, if
   # the platform doesn't support lock-free atomics.
   check_library_exists(atomic __atomic_fetch_add_4 "" HPX_HAVE_LIBATOMIC)
@@ -656,6 +669,13 @@ endfunction()
 function(hpx_check_for_cxx17_fallthrough_attribute)
   add_hpx_config_test(HPX_WITH_CXX17_FALLTHROUGH_ATTRIBUTE
     SOURCE cmake/tests/cxx17_fallthrough_attribute.cpp
+    FILE ${ARGN})
+endfunction()
+
+###############################################################################
+function(hpx_check_for_cxx17_hardware_destructive_interference_size)
+  add_hpx_config_test(HPX_WITH_CXX17_HARDWARE_DESTRUCTIVE_INTERFERENCE_SIZE
+    SOURCE cmake/tests/cxx17_hardware_destructive_interference_size.cpp
     FILE ${ARGN})
 endfunction()
 

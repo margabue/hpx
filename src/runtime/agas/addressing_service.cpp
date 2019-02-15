@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //  Copyright (c) 2011 Bryce Adelstein-Lelbach
-//  Copyright (c) 2011-2018 Hartmut Kaiser
+//  Copyright (c) 2011-2019 Hartmut Kaiser
 //  Copyright (c) 2016 Parsa Amini
 //  Copyright (c) 2016 Thomas Heller
 //
@@ -1012,8 +1012,8 @@ bool addressing_service::resolve_locally_known_addresses(
             addr.locality_ = dest;
             addr.type_ = hpx::components::component_agas_primary_namespace;
             // addr.address_ will be supplied on the target locality
-            return true;
         }
+        return true;
     }
 
     if (HPX_AGAS_SYMBOL_NS_LSB == lsb)
@@ -1030,7 +1030,6 @@ bool addressing_service::resolve_locally_known_addresses(
             addr.type_ = hpx::components::component_agas_symbol_namespace;
             // addr.address_ will be supplied on the target locality
         }
-
         return true;
     }
 
@@ -1635,21 +1634,6 @@ void addressing_service::decref(
 } // }}}
 
 ///////////////////////////////////////////////////////////////////////////////
-bool addressing_service::register_name(
-    std::string const& name
-  , naming::gid_type const& id
-  , error_code& ec
-    )
-{ // {{{
-    try {
-        return symbol_ns_.bind(name, naming::detail::get_stripped_gid(id));
-    }
-    catch (hpx::exception const& e) {
-        HPX_RETHROWS_IF(ec, e, "addressing_service::register_name");
-        return false;
-    }
-} // }}}
-
 static bool correct_credit_on_failure(future<bool> f, naming::id_type id,
     std::int64_t mutable_gid_credit, std::int64_t new_gid_credit)
 {
@@ -1662,10 +1646,45 @@ static bool correct_credit_on_failure(future<bool> f, naming::id_type id,
     return true;
 }
 
+bool addressing_service::register_name(
+    std::string const& name, naming::gid_type const& id, error_code& ec)
+{ // {{{
+    try
+    {
+        return symbol_ns_.bind(name, naming::detail::get_stripped_gid(id));
+    }
+    catch (hpx::exception const& e)
+    {
+        HPX_RETHROWS_IF(ec, e, "addressing_service::register_name");
+    }
+    return false;
+} // }}}
+
+bool addressing_service::register_name(
+    std::string const& name, naming::id_type const& id, error_code& ec)
+{
+    // We need to modify the reference count.
+    naming::gid_type& mutable_gid = const_cast<naming::id_type&>(id).get_gid();
+    naming::gid_type new_gid = naming::detail::split_gid_if_needed(mutable_gid).get();
+    std::int64_t new_credit = naming::detail::get_credit_from_gid(new_gid);
+
+    try
+    {
+        return symbol_ns_.bind(name, new_gid);
+    }
+    catch (hpx::exception const& e)
+    {
+        if (new_credit != 0)
+        {
+            naming::detail::add_credit_to_gid(mutable_gid, new_credit);
+        }
+        HPX_RETHROWS_IF(ec, e, "addressing_service::register_name");
+    }
+    return false;
+}
+
 lcos::future<bool> addressing_service::register_name_async(
-    std::string const& name
-  , naming::id_type const& id
-    )
+    std::string const& name, naming::id_type const& id)
 { // {{{
     // We need to modify the reference count.
     naming::gid_type& mutable_gid = const_cast<naming::id_type&>(id).get_gid();
@@ -2617,6 +2636,7 @@ void addressing_service::send_refcnt_requests_sync(
 hpx::future<void> addressing_service::mark_as_migrated(
     naming::gid_type const& gid_
   , util::unique_function_nonser<std::pair<bool, hpx::future<void> >()> && f //-V669
+  , bool expect_to_be_marked_as_migrating
     )
 {
     if (!gid_)
@@ -2658,7 +2678,14 @@ hpx::future<void> addressing_service::mark_as_migrated(
 
         // insert the object into the map of migrated objects
         if (it == migrated_objects_table_.end())
+        {
+            HPX_ASSERT(!expect_to_be_marked_as_migrating);
             migrated_objects_table_.insert(gid);
+        }
+        else
+        {
+            HPX_ASSERT(expect_to_be_marked_as_migrating);
+        }
 
         // avoid interactions with the locking in the cache
         lock.unlock();
@@ -2691,7 +2718,7 @@ void addressing_service::unmark_as_migrated(
     migrated_objects_table_type::iterator it =
         migrated_objects_table_.find(gid);
 
-    // insert the object into the map of migrated objects
+    // remove the object from the map of migrated objects
     if (it != migrated_objects_table_.end())
     {
         migrated_objects_table_.erase(it);
@@ -2708,7 +2735,7 @@ void addressing_service::unmark_as_migrated(
     }
 }
 
-std::pair<naming::id_type, naming::address>
+hpx::future<std::pair<naming::id_type, naming::address>>
 addressing_service::begin_migration(naming::id_type const& id)
 {
     typedef std::pair<naming::id_type, naming::address> result_type;
@@ -2716,7 +2743,7 @@ addressing_service::begin_migration(naming::id_type const& id)
     if (!id)
     {
         HPX_THROW_EXCEPTION(bad_parameter,
-            "addressing_service::begin_migration_async",
+            "addressing_service::begin_migration",
             "invalid reference id");
     }
 
@@ -2734,7 +2761,7 @@ bool addressing_service::end_migration(
     if (!id)
     {
         HPX_THROW_EXCEPTION(bad_parameter,
-            "addressing_service::end_migration_async",
+            "addressing_service::end_migration",
             "invalid reference id");
     }
 
@@ -2871,7 +2898,7 @@ namespace hpx
                 "no basename specified");
         }
 
-        if (sequence_nr == std::size_t(~0U))
+        if (sequence_nr == ~0U)
         {
             sequence_nr =
                 std::size_t(naming::get_locality_id_from_id(find_here()));
@@ -2891,7 +2918,7 @@ namespace hpx
                 "no basename specified");
         }
 
-        if (sequence_nr == std::size_t(~0U))
+        if (sequence_nr == ~0U)
         {
             sequence_nr =
                 std::size_t(naming::get_locality_id_from_id(find_here()));
@@ -2925,7 +2952,7 @@ namespace hpx
                 "no basename specified");
         }
 
-        if (sequence_nr == std::size_t(~0U))
+        if (sequence_nr == ~0U)
         {
             sequence_nr =
                 std::size_t(naming::get_locality_id_from_id(find_here()));

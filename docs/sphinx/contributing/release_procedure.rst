@@ -79,7 +79,7 @@ are completed to avoid confusion.
 #. Protect the release branch again to disable deleting and force pushes.
 
 #. Checkout the release branch, and replace the ``-trunk`` tag in
-   ``hpx/config/version.hpp`` with ``-rc1``.
+   ``CMakeLists.txt`` with ``-rc1``.
 
 #. Remove the examples and benchmarks that will not go into the release from the
    release branch.
@@ -124,14 +124,18 @@ are completed to avoid confusion.
    * Repeat by tagging a new release candidate as many times as needed.
 
 #. Checkout the release branch, and replace the ``-rcN`` tag in
-   ``hpx/config/version.hpp`` with an empty string.
+   ``CMakeLists.txt`` with an empty string.
+
+#. Update any occurrences of the latest stable release to refer to the version
+   about to be released. For example, ``quickstart.rst`` contains instructions
+   to check out the latest stable tag. Make sure that refers to the new version.
 
 #. Add a new entry to the RPM changelog (``cmake/packaging/rpm/Changelog.txt``)
    with the new version number and a link to the corresponding changelog.
 
 #. Add the release date to the caption of the current "What's New" section in
    the docs, and change the value of ``HPX_VERSION_DATE`` in
-   ``hpx/config/version.hpp``.
+   ``CMakeLists.txt``.
 
 #. Tag the release from the release branch, where tag name is the version to be
    released and description is "HPX V$VERSION: The C++ Standards Library for
@@ -139,7 +143,7 @@ are completed to avoid confusion.
    ``contact@stellar-group.org`` key by adding the ``-s`` flag to ``git tag``.
    Make sure you change git to sign with the ``contact@stellar-group.org`` key,
    rather than your own key if you use one. You also need to change the name and
-   email used for commits. Change them to ``Ste||ar Group`` and
+   email used for commits. Change them to ``STE||AR Group`` and
    ``contact@stellar-group.org``, respectively. Finally, the
    ``contact@stellar-group.org`` email address needs to be added to your GitHub
    account for the tag to show up as verified.
@@ -171,8 +175,8 @@ are completed to avoid confusion.
       http://stellar.cct.lsu.edu/files/hpx_#.#.#.tar.bz2
       http://stellar.cct.lsu.edu/files/hpx_#.#.#.7z
 
-#. Update the websites (`stellar-group.org`_ and `stellar.cct.lsu.edu`_) with
-   the following:
+#. Update the websites (`stellar-group.org <https://stellar-group.org>`_ and
+   `stellar.cct.lsu.edu <https://stellar.cct.lsu.edu>`_) with the following:
 
    * Download links on the download page
    * Documentation links on the docs page (link to generated documentation on
@@ -186,7 +190,6 @@ are completed to avoid confusion.
    example by the next version number). Bump the HPX version to the next
    release target. The following files contain version info:
 
-   * ``hpx/config/version.hpp``
    * ``CMakeLists.txt``
    * Grep for old version number
 

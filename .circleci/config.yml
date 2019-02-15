@@ -13,10 +13,25 @@ convert_xml: &convert_xml
     name: Converting XML
     when: always
     command: |
-        mkdir ${CIRCLE_JOB}
+        mkdir -p ${CIRCLE_JOB}
         xsltproc \
           /hpx/conv.xsl Testing/`head -n 1 < Testing/TAG`/Test.xml \
           > ${CIRCLE_JOB}/Test.xml
+
+move_core_dump: &move_core_dump
+    name: Moving core dumps
+    when: on_fail
+    command: |
+        mkdir -p ${CIRCLE_JOB}
+        # Ignore errors if there are no core dumps
+        cp core.* ${CIRCLE_JOB} || true
+
+move_debug_log: &move_debug_log
+    name: Moving debug logs
+    when: on_fail
+    command: |
+        mkdir -p ${CIRCLE_JOB}
+        cp debug-log.txt ${CIRCLE_JOB} || true
 
 gh_pages_filter: &gh_pages_filter
     filters:
@@ -91,6 +106,9 @@ jobs:
                 -DHPX_WITH_COMPILER_WARNINGS_AS_ERRORS=On \
                 -DHPX_WITH_DEPRECATION_WARNINGS=Off \
                 -DHPX_WITH_THREAD_LOCAL_STORAGE=On \
+                -DHPX_WITH_TESTS_DEBUG_LOG=On \
+                -DHPX_WITH_TESTS_DEBUG_LOG_DESTINATION=/hpx/build/debug-log.txt \
+                -DHPX_WITH_SPINLOCK_DEADLOCK_DETECTION=On \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
                 -DHPX_WITH_DOCUMENTATION=On
       - persist_to_workspace:
@@ -194,9 +212,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.examples
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.examples
       - store_artifacts:
@@ -215,9 +238,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.actions
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.actions
       - store_artifacts:
@@ -236,9 +264,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.agas
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.agas
       - store_artifacts:
@@ -250,6 +283,10 @@ jobs:
       - attach_workspace:
           at: /hpx
       - run:
+          name: Installing HPX for build unit tests
+          command: |
+              ninja install
+      - run:
           name: Building Unit Tests
           command: |
               ninja -j2 -k 0 tests.unit.build
@@ -257,9 +294,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.build
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.build
       - store_artifacts:
@@ -278,9 +320,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.component
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.component
       - store_artifacts:
@@ -299,9 +346,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.computeapi
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.computeabi
       - store_artifacts:
@@ -320,9 +372,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.diagnostics
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.diagnostics
       - store_artifacts:
@@ -341,9 +398,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.lcos
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.lcos
       - store_artifacts:
@@ -362,9 +424,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.algorithms
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.algorithms
       - store_artifacts:
@@ -383,9 +450,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.block
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.block
       - store_artifacts:
@@ -404,9 +476,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.container_algorithms
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.container_algorithms
       - store_artifacts:
@@ -425,9 +502,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.datapar_algorithms
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.datapar_algorithms
       - store_artifacts:
@@ -446,9 +528,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.executors
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.executors
       - store_artifacts:
@@ -469,9 +556,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parallel.segmented_algorithms
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parallel.segmented_algorithms
       - store_artifacts:
@@ -490,9 +582,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.parcelset
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.parcelset
       - store_artifacts:
@@ -511,9 +608,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.performance_counter
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.performance_counter
       - store_artifacts:
@@ -532,9 +634,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.resource
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.resource
       - store_artifacts:
@@ -553,9 +660,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.serialization
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.serialization
       - store_artifacts:
@@ -574,9 +686,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.threads
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.threads
       - store_artifacts:
@@ -595,9 +712,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.traits
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.traits
       - store_artifacts:
@@ -616,9 +738,14 @@ jobs:
           name: Running Unit Tests
           when: always
           command: |
+              ulimit -c unlimited
               ctest -T test --no-compress-output --output-on-failure -R tests.unit.util
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.unit.util
       - store_artifacts:
@@ -640,6 +767,10 @@ jobs:
               ctest -T test --no-compress-output --output-on-failure -R tests.regressions
       - run:
           <<: *convert_xml
+      - run:
+          <<: *move_core_dump
+      - run:
+          <<: *move_debug_log
       - store_test_results:
           path: tests.regressions
       - store_artifacts:
@@ -875,6 +1006,11 @@ jobs:
           command: |
               ./bin/hello_world --hpx:bind=none
               ninja -j2 install
+          working_directory: /hpx/build
+          when: always
+      - run:
+          name: Testing installed HPX
+          command: |
               hello_world --hpx:bind=none
               ldconfig
               hpxcxx --exe=hello_world_test_build ../source/examples/quickstart/hello_world.cpp -g -lhpx_iostreamsd
@@ -957,8 +1093,6 @@ workflows:
           <<: *core_dependency
       - tests.unit.agas:
           <<: *core_dependency
-      - tests.unit.build:
-          <<: *core_dependency
       - tests.unit.component:
           <<: *core_dependency
       - tests.unit.computeapi:
@@ -1023,6 +1157,11 @@ workflows:
           <<: *core_dependency
       - examples:
           <<: *core_dependency
+      - tests.unit.build:
+          requires:
+            - examples
+            - core
+          <<: *gh_pages_filter
       - install:
           requires:
             - inspect

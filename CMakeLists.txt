@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2018 Hartmut Kaiser
+# Copyright (c) 2007-2019 Hartmut Kaiser
 # Copyright (c) 2011-2014 Thomas Heller
 # Copyright (c) 2007-2008 Chirag Dekate
 # Copyright (c)      2011 Bryce Lelbach
@@ -45,12 +45,15 @@ endif()
 ################################################################################
 project(HPX CXX C)
 
-set(HPX_MAJOR_VERSION 1)
-set(HPX_MINOR_VERSION 3)
-set(HPX_PATCH_LEVEL   0)
-set(HPX_VERSION "${HPX_MAJOR_VERSION}.${HPX_MINOR_VERSION}.${HPX_PATCH_LEVEL}")
+set(HPX_VERSION_MAJOR 1)
+set(HPX_VERSION_MINOR 3)
+set(HPX_VERSION_SUBMINOR 0)
+set(HPX_VERSION_DATE 20181112)
+set(HPX_VERSION_TAG "-trunk")
+
+set(HPX_VERSION "${HPX_VERSION_MAJOR}.${HPX_VERSION_MINOR}.${HPX_VERSION_SUBMINOR}")
 set(HPX_LIBRARY_VERSION "${HPX_VERSION}")
-set(HPX_SOVERSION ${HPX_MAJOR_VERSION})
+set(HPX_SOVERSION ${HPX_VERSION_MAJOR})
 set(HPX_PACKAGE_NAME HPX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -71,6 +74,13 @@ if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
   hpx_set_cmake_policy(CMP0054 OLD)
 endif()
 hpx_set_cmake_policy(CMP0060 NEW)
+
+# If we have a cmake version older than 3.12, we can't rely on CONFIGURE_DEPENDS
+if(${CMAKE_VERSION} VERSION_LESS "3.12")
+  set(DO_CONFIGURE_DEPENDS)
+else()
+  set(DO_CONFIGURE_DEPENDS CONFIGURE_DEPENDS)
+endif()
 
 # We save the passed compiler flag to a special variable. This is needed for our
 # build system unit tests. Some flags might influence the created symbols
@@ -599,6 +609,12 @@ if(HPX_WITH_SCHEDULER_LOCAL_STORAGE)
   hpx_add_config_define(HPX_HAVE_SCHEDULER_LOCAL_STORAGE)
 endif()
 
+hpx_option(HPX_WITH_SPINLOCK_POOL_NUM STRING
+  "Number of elements a spinlock pool manages (default: 128)"
+  128 CATEGORY "Thread Manager" ADVANCED)
+
+hpx_add_config_define(HPX_HAVE_SPINLOCK_POOL_NUM ${HPX_WITH_SPINLOCK_POOL_NUM})
+
 # Count number of terminated threads before forcefully cleaning up all of
 # them. Note: terminated threads are cleaned up either when this number is
 # reached for a particular thread queue or if the HPX_BUSY_LOOP_COUNT_MAX is
@@ -886,6 +902,16 @@ hpx_option(HPX_WITH_ATTACH_DEBUGGER_ON_TEST_FAILURE BOOL
 if(HPX_WITH_ATTACH_DEBUGGER_ON_TEST_FAILURE)
   hpx_add_config_define(HPX_HAVE_ATTACH_DEBUGGER_ON_TEST_FAILURE)
 endif()
+
+hpx_option(HPX_WITH_TESTS_DEBUG_LOG BOOL
+  "Turn on debug logs (--hpx:debug-hpx-log) for tests (default: OFF)"
+  OFF
+  CATEGORY "Debugging" ADVANCED)
+
+hpx_option(HPX_WITH_TESTS_DEBUG_LOG_DESTINATION STRING
+  "Destination for test debug logs (default: cout)"
+  "cout"
+  CATEGORY "Debugging" ADVANCED)
 
 # If APEX is defined, the action timers need thread debug info.
 if(HPX_WITH_APEX)
@@ -1433,6 +1459,12 @@ endif()
 if(MSVC)
   # Display full paths in diagnostics
   hpx_add_compile_flag(-FC LANGUAGES C CXX)
+  if(CMAKE_CL_64)
+    set(__target_arch "x86_64")
+  else()
+    set(__target_arch "x84")
+  endif()
+  hpx_info("Architecture detected: ${__target_arch}")
 else()
   # Show the flags that toggle each warning
   hpx_add_compile_flag_if_available(-fdiagnostics-show-option LANGUAGES CXX C Fortran)
@@ -1506,28 +1538,51 @@ else()
     hpx_add_compile_flag_if_available(-wd2536)
   endif()
 
+  set(__has_timestamp_support OFF)
+  include(TargetArch)
 
-  # rdtsc is an x86 instruction that reads the value of a CPU time stamp
-  # counter. rdtscp is an extension to rdtsc. The difference is that rdtscp is
-  # a serializing instruction.
-  hpx_cpuid("rdtsc" HPX_WITH_RDTSC
-    DEFINITIONS HPX_HAVE_RDTSC)
+  target_architecture(__target_arch)
+  if("${__target_arch}" STREQUAL "i386" OR
+     "${__target_arch}" STREQUAL "ix86" OR
+     "${__target_arch}" STREQUAL "x86_64" OR
+     "${__target_arch}" STREQUAL "ia64")
 
- # One can not assume if RDTSCP is available on the hardware
- # of the build infrastructure, that it will be available on
- # all potential target hardware, see Issue  #3575
- if(NOT ${HPX_WITH_BUILD_BINARY_PACKAGE})
+      # rdtsc is an x86 instruction that reads the value of a CPU time stamp
+      # counter. rdtscp is an extension to rdtsc. The difference is that rdtscp is
+      # a serializing instruction.
+      hpx_cpuid("rdtsc" HPX_WITH_RDTSC DEFINITIONS HPX_HAVE_RDTSC)
 
-  # XeonPhi's do not support RDTSCP
-  if(NOT ("${HPX_PLATFORM_UC}" STREQUAL "XEONPHI"))
-    hpx_cpuid("rdtscp" HPX_WITH_RDTSCP
-      DEFINITIONS HPX_HAVE_RDTSCP)
+      # One can not assume if RDTSCP is available on the hardware
+      # of the build infrastructure, that it will be available on
+      # all potential target hardware, see Issue  #3575
+      if(NOT ${HPX_WITH_BUILD_BINARY_PACKAGE})
+
+        # XeonPhi's do not support RDTSCP
+        if(NOT ("${HPX_PLATFORM_UC}" STREQUAL "XEONPHI"))
+          hpx_cpuid("rdtscp" HPX_WITH_RDTSCP DEFINITIONS HPX_HAVE_RDTSCP)
+        endif()
+
+      endif()
+      if(HPX_WITH_RDTSC OR HPX_WITH_RDTSCP)
+        set(__has_timestamp_support ON)
+      endif()
+  elseif("${__target_arch}" STREQUAL "arm" OR
+         "${__target_arch}" STREQUAL "armv5" OR
+         "${__target_arch}" STREQUAL "armv6" OR
+         "${__target_arch}" STREQUAL "armv7")
+    set(__has_timestamp_support ON)
+  elseif("${__target_arch}" STREQUAL "ppc" OR
+         "${__target_arch}" STREQUAL "ppc64")
+    set(__has_timestamp_support ON)
+  elseif("${__target_arch}" STREQUAL "bgq")
+    set(__has_timestamp_support ON)
+  elseif("${__target_arch}" STREQUAL "s390x")
+    set(__has_timestamp_support ON)
   endif()
 
- endif()
-
-  if(NOT HPX_WITH_RDTSC AND NOT HPX_WITH_RDTSCP)
-    hpx_warn("Neither rdtsc nor rdtscp is available; some performance counters may report incorrect results")
+  hpx_info("Architecture detected: ${__target_arch}")
+  if(NOT __has_timestamp_support)
+    hpx_warn("No timestamp support is available; some performance counters may report incorrect results")
   endif()
 endif()
 
@@ -1762,7 +1817,7 @@ hpx_include(SetOutputPaths)
 ##############################################################################
 
 ################################################################################
-# Provide a macro for generating config headers
+# Provide a function for generating config headers
 ################################################################################
 function(generate_config_defines_header TARGET_DIRECTORY)
   # Generate a defines.hpp to be used in the build directory ...
@@ -1777,6 +1832,50 @@ endfunction()
 # Set basic search paths for the generated HPX headers
 ################################################################################
 include_directories("${CMAKE_BINARY_DIR}")
+
+################################################################################
+# Add custom targets for tests
+################################################################################
+if (HPX_WITH_TESTS)
+  add_hpx_pseudo_target(tests)
+  if (HPX_WITH_TESTS_UNIT)
+    add_hpx_pseudo_target(tests.unit)
+    add_hpx_pseudo_dependencies(tests tests.unit)
+  endif()
+  if (HPX_WITH_TESTS_REGRESSIONS)
+    add_hpx_pseudo_target(tests.regressions)
+    add_hpx_pseudo_dependencies(tests tests.regressions)
+  endif()
+  if (HPX_WITH_TESTS_BENCHMARKS)
+    add_hpx_pseudo_target(tests.performance)
+    add_hpx_pseudo_dependencies(tests tests.performance)
+  endif()
+  if (HPX_WITH_TESTS_HEADERS)
+    add_hpx_pseudo_target(tests.headers)
+    add_hpx_pseudo_dependencies(tests tests.headers)
+  endif()
+  if (HPX_WITH_TESTS_EXAMPLES)
+    add_hpx_pseudo_target(tests.examples)
+    add_hpx_pseudo_dependencies(tests tests.examples)
+  endif()
+
+  enable_testing()
+  include(CTest)
+endif()
+
+################################################################################
+# Add libraries
+################################################################################
+if(HPX_WITH_STATIC_LINKING)
+  if(MSVC)
+    # The MSVC linker can't handle a static library as large as we get when
+    # statically linking the main HPX library
+    set(hpx_libs_link_mode SHARED)
+  else()
+    set(hpx_libs_link_mode ${hpx_library_link_mode})
+  endif()
+endif()
+add_subdirectory(libs)
 
 ################################################################################
 # Configure compression and other plugins
@@ -1828,11 +1927,6 @@ if(HPX_WITH_TESTS)
     hpx_warn("A python interpreter could not be found. The test suite can not be run automatically.")
   endif()
 
-  add_hpx_pseudo_target(tests)
-
-  enable_testing()
-  include(CTest)
-
   include_directories(tests)
   add_subdirectory(tests)
 endif()
@@ -1858,7 +1952,7 @@ endif()
 add_plugin_modules()
 
 ################################################################################
-# Configure the header to include all compile definitions
+# Generate config headers and helpers
 ################################################################################
 generate_config_defines_header(${CMAKE_BINARY_DIR})
 
@@ -1868,6 +1962,17 @@ write_config_defines_file(
   TEMPLATE "${PROJECT_SOURCE_DIR}/cmake/templates/config_defines.hpp.in"
   NAMESPACE default
   FILENAME "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/hpx/config/defines.hpp")
+
+# Configure version.hpp for build tree and install directory
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/templates/config_version.hpp.in"
+    "${CMAKE_BINARY_DIR}/hpx/config/version.hpp"
+    @ONLY)
+
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/templates/config_version.hpp.in"
+    "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/hpx/config/version.hpp"
+    @ONLY)
 
 # Configure hpxrun.py
 configure_file("${PROJECT_SOURCE_DIR}/cmake/templates/hpxrun.py.in"
@@ -1909,7 +2014,8 @@ install( # Install all HPX cmake utility files
   DIRECTORY cmake/
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HPX_PACKAGE_NAME}
   COMPONENT core
-  PATTERN ".cmake.in" EXCLUDE
+  PATTERN "templates" EXCLUDE
+  PATTERN "packaging" EXCLUDE
   PATTERN ".git" EXCLUDE)
 
 install( # Install HPX Python scripts

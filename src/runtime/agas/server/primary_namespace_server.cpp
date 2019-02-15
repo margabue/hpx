@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //  Copyright (c) 2011 Bryce Adelstein-Lelbach
-//  Copyright (c) 2012-2017 Hartmut Kaiser
+//  Copyright (c) 2012-2019 Hartmut Kaiser
 //  Copyright (c) 2016 Thomas Heller
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -280,13 +280,18 @@ bool primary_namespace::end_migration(naming::gid_type id)
     using hpx::util::get;
 
     migration_table_type::iterator it = migrating_objects_.find(id);
-    if (it == migrating_objects_.end() || !get<0>(it->second))
-        return false;
+    HPX_ASSERT(it != migrating_objects_.end() && get<0>(it->second));
 
     // flag this id as not being migrated anymore
     get<0>(it->second) = false;
-
-    get<2>(it->second).notify_all(std::move(l), hpx::throws);
+    if (get<1>(it->second) != 0)
+    {
+        get<2>(it->second).notify_all(std::move(l), hpx::throws);
+    }
+    else
+    {
+        migrating_objects_.erase(it);
+    }
 
     return true;
 }
@@ -302,15 +307,24 @@ void primary_namespace::wait_for_migration_locked(
     using hpx::util::get;
 
     migration_table_type::iterator it = migrating_objects_.find(id);
-    if (it != migrating_objects_.end() && get<0>(it->second))
+    if (it != migrating_objects_.end())
     {
-        ++get<1>(it->second);
+        if (get<0>(it->second))
+        {
+            ++get<1>(it->second);
 
-        get<2>(it->second).wait(l, ec);
+            get<2>(it->second).wait(l, ec);
 
-        HPX_ASSERT(hpx::util::get<0>(it->second) == false);
-        if (--get<1>(it->second) == 0)
-            migrating_objects_.erase(it);
+            if (--get<1>(it->second) == 0)
+                migrating_objects_.erase(it);
+        }
+        else
+        {
+            if (get<1>(it->second) == 0)
+            {
+                migrating_objects_.erase(it);
+            }
+        }
     }
 }
 
@@ -684,7 +698,7 @@ std::vector<std::int64_t> primary_namespace::decrement_credit(
         // Decrement.
         if (credits < 0)
         {
-            std::list<free_entry> free_list;
+            free_entry_list_type free_list;
             decrement_sweep(free_list, lower, upper, -credits, hpx::throws);
 
             free_components_sync(free_list, lower, upper, hpx::throws);
@@ -887,7 +901,7 @@ void primary_namespace::increment(
 void primary_namespace::resolve_free_list(
     std::unique_lock<mutex_type>& l
   , std::list<refcnt_table_type::iterator> const& free_list
-  , std::list<free_entry>& free_entry_list
+  , free_entry_list_type& free_entry_list
   , naming::gid_type const& lower
   , naming::gid_type const& upper
   , error_code& ec
@@ -978,7 +992,7 @@ void primary_namespace::resolve_free_list(
 
 ///////////////////////////////////////////////////////////////////////////////
 void primary_namespace::decrement_sweep(
-    std::list<free_entry>& free_entry_list
+    free_entry_list_type& free_entry_list
   , naming::gid_type const& lower
   , naming::gid_type const& upper
   , std::int64_t credits
@@ -1102,7 +1116,7 @@ void primary_namespace::decrement_sweep(
 
 ///////////////////////////////////////////////////////////////////////////////
 void primary_namespace::free_components_sync(
-    std::list<free_entry>& free_list
+    free_entry_list_type& free_list
   , naming::gid_type const& lower
   , naming::gid_type const& upper
   , error_code& ec

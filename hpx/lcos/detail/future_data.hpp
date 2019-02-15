@@ -264,15 +264,15 @@ namespace detail
         // continuation support
 
         // deferred execution of a given continuation
-        bool run_on_completed(completed_callback_type&& on_completed,
-            std::exception_ptr& ptr);
-        bool run_on_completed(completed_callback_vector_type&& on_completed,
-            std::exception_ptr& ptr);
+        static void run_on_completed(
+            completed_callback_type&& on_completed) noexcept;
+        static void run_on_completed(
+            completed_callback_vector_type&& on_completed) noexcept;
 
         // make sure continuation invocation does not recurse deeper than
         // allowed
         template <typename Callback>
-        void handle_on_completed(Callback&& on_completed);
+        static void handle_on_completed(Callback&& on_completed);
 
         /// Set the callback which needs to be invoked when the future becomes
         /// ready. If the future is ready the function will be invoked
@@ -428,6 +428,10 @@ namespace detail
             // registered continuations
             std::unique_lock<mutex_type> l(mtx_);
 
+            // handle all threads waiting for the future to become ready
+            auto on_completed = std::move(on_completed_);
+            on_completed_.clear();
+
             // The value has been set, changing the state to 'value' at this
             // point signals to all other threads that this future is ready.
             state expected = empty;
@@ -442,10 +446,6 @@ namespace detail
                     "data has already been set for this future");
                 return;
             }
-
-            // handle all threads waiting for the future to become ready
-            auto on_completed = std::move(on_completed_);
-            on_completed_.clear();
 
             // Note: we use notify_one repeatedly instead of notify_all as we
             //       know: a) that most of the time we have at most one thread
@@ -484,6 +484,10 @@ namespace detail
             // registered continuations
             std::unique_lock<mutex_type> l(mtx_);
 
+            // handle all threads waiting for the future to become ready
+            auto on_completed = std::move(on_completed_);
+            on_completed_.clear();
+
             // The value has been set, changing the state to 'exception' at this
             // point signals to all other threads that this future is ready.
             state expected = empty;
@@ -498,10 +502,6 @@ namespace detail
                     "data has already been set for this future");
                 return;
             }
-
-            // handle all threads waiting for the future to become ready
-            auto on_completed = std::move(on_completed_);
-            on_completed_.clear();
 
             // Note: we use notify_one repeatedly instead of notify_all as we
             //       know: a) that most of the time we have at most one thread
@@ -527,6 +527,22 @@ namespace detail
         // non-successful)
         template <typename T>
         void set_data(T && result)
+        {
+            // set the received result, reset error status
+            try {
+                // store the value
+                set_value(std::forward<T>(result));
+            }
+            catch (...) {
+                // store the error instead
+                return set_exception(std::current_exception());
+            }
+        }
+
+        // helper functions for setting data (if successful) or the error (if
+        // non-successful)
+        template <typename T>
+        void set_remote_data(T && result)
         {
             // set the received result, reset error status
             try {

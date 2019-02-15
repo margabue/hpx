@@ -48,6 +48,7 @@ set(tests
     shared_future_then_2166
     shared_mutex_1702
     shared_stated_leaked_1211
+    shared_future_then_with_executor_3634
     sliding_semaphore_2338
     split_future_2246
     wait_all_hang_1946
@@ -123,6 +124,7 @@ add_hpx_test(
 # compile only tests
 if(HPX_WITH_COMPILE_ONLY_TESTS)
   set(compile_tests
+      dataflow_future_ref_3639
       future_range_ambiguity_2032
       wait_all_std_array_2035
      )

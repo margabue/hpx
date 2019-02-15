@@ -1,4 +1,4 @@
-//  Copyright (c) 2007-2018 Hartmut Kaiser
+//  Copyright (c) 2007-2019 Hartmut Kaiser
 //  Copyright (c) 2013 Agustin Berge
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -526,10 +526,15 @@ namespace hpx { namespace lcos { namespace detail
 //         typename future_unwrap_result<future<R>>::result_type>::type
 //     unwrap(future<R> && future, error_code& ec = throws);
 
+    template <typename Allocator, typename Future>
+    typename traits::detail::shared_state_ptr<
+        typename future_unwrap_result<Future>::result_type>::type
+    unwrap_alloc(Allocator const& a, Future&& future, error_code& ec = throws);
+
     template <typename Future>
     typename hpx::traits::detail::shared_state_ptr<
         typename future_unwrap_result<Future>::result_type>::type
-    unwrap(Future && future, error_code& ec = throws);
+    unwrap(Future&& future, error_code& ec = throws);
 
     ///////////////////////////////////////////////////////////////////////////
     template <typename Future>
@@ -1378,19 +1383,13 @@ namespace hpx { namespace lcos
                 std::forward<Policy>(policy), std::forward<F>(f), ec);
         }
 
-        template <typename F>
-        typename hpx::traits::future_then_result<shared_future, F>::type
-        then(threads::executor& sched, F && f, error_code& ec = throws) const
-        {
-            return base_type::then(shared_future(*this),
-                sched, std::forward<F>(f), ec);
-        }
-
         template <typename Executor, typename F>
         typename util::lazy_enable_if<
             hpx::traits::is_one_way_executor<
                 typename std::decay<Executor>::type>::value ||
             hpx::traits::is_two_way_executor<
+                typename std::decay<Executor>::type>::value ||
+            hpx::traits::is_threads_executor<
                 typename std::decay<Executor>::type>::value
           , hpx::traits::future_then_executor_result<Executor, shared_future, F>
         >::type

@@ -48,6 +48,11 @@ bool register_name(
   , error_code& ec
     )
 {
+    if (&ec == &throws)
+    {
+        naming::resolver_client& agas_ = naming::get_agas_client();
+        return agas_.register_name(name, id);
+    }
     return register_name(name, id).get(ec);
 }
 
@@ -162,6 +167,13 @@ std::uint32_t get_num_overall_threads(
 {
     naming::resolver_client& agas_ = naming::get_agas_client();
     return agas_.get_num_overall_threads(ec);
+}
+
+std::string get_component_type_name(
+    components::component_type type, error_code& ec)
+{
+    naming::resolver_client& agas_ = naming::get_agas_client();
+    return agas_.get_component_type_name(type, ec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -489,7 +501,7 @@ hpx::future<hpx::id_type> on_symbol_namespace_event(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-std::pair<naming::id_type, naming::address>
+hpx::future<std::pair<naming::id_type, naming::address>>
     begin_migration(naming::id_type const& id)
 {
     naming::resolver_client& resolver = naming::get_agas_client();
@@ -503,10 +515,12 @@ bool end_migration(naming::id_type const& id)
 }
 
 hpx::future<void> mark_as_migrated(naming::gid_type const& gid,
-    util::unique_function_nonser<std::pair<bool, hpx::future<void> >()> && f)
+    util::unique_function_nonser<std::pair<bool, hpx::future<void> >()> && f,
+    bool expect_to_be_marked_as_migrating)
 {
     naming::resolver_client& resolver = naming::get_agas_client();
-    return resolver.mark_as_migrated(gid, std::move(f));
+    return resolver.mark_as_migrated(
+        gid, std::move(f), expect_to_be_marked_as_migrating);
 }
 
 std::pair<bool, components::pinned_ptr>

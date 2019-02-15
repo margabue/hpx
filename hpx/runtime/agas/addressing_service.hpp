@@ -48,8 +48,6 @@
 
 namespace hpx { namespace agas
 {
-struct request;
-struct response;
 HPX_EXPORT void destroy_big_boot_barrier();
 
 struct HPX_EXPORT addressing_service
@@ -1231,12 +1229,9 @@ public:
 
     bool register_name(
         std::string const& name
-      , naming::id_type const& id
-      , error_code& ec = throws
-        )
-    {
-        return register_name_async(name, id).get(ec);
-    }
+        , naming::id_type const& id
+        , error_code& ec = throws
+    );
 
     /// \brief Unregister a global name (release any existing association)
     ///
@@ -1379,7 +1374,7 @@ public:
     /// start/stop migration of an object
     ///
     /// \returns Current locality and address of the object to migrate
-    std::pair<naming::id_type, naming::address>
+    hpx::future<std::pair<naming::id_type, naming::address>>
         begin_migration(naming::id_type const& id);
     bool end_migration(naming::id_type const& id);
 
@@ -1392,7 +1387,8 @@ public:
     /// Delay migration until the object is unpinned otherwise.
     hpx::future<void> mark_as_migrated(naming::gid_type const& gid,
         util::unique_function_nonser<
-            std::pair<bool, hpx::future<void> >()> && f);
+            std::pair<bool, hpx::future<void> >()> && f,
+        bool expect_to_be_marked_as_migrating);
 
     /// Remove the given object from the table of migrated objects
     void unmark_as_migrated(naming::gid_type const& gid);
