@@ -20,9 +20,7 @@ namespace hpx { namespace threads { namespace policies
     {
     public:
         //////////////////////////////////////////////////////////////////////////////////
-        typedef thread_queue<
-            Mutex, PendingQueuing, StagedQueuing, TerminatedQueuing
-        > thread_queue_type;
+        typedef thread_queue<> thread_queue_type;
 
         //////////////////////////////////////////////////////////////////////////////////
         ffwd_scheduler(std::size_t num_threads) : scheduler_base(num_threads), thread_count(num_threads), max_queue_thread_count_(1000)
